@@ -613,7 +613,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
       } else {
         document.exitFullscreen();
       }
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
@@ -1708,7 +1708,7 @@ const FORMAT_CHIPS = [
   { ext: "JPG",  color: "bg-pink-100 text-pink-700"    },
 ];
 
-function ImportTab({ categories, onImport }) {
+function ImportTab({ categories: _categories, onImport }) {
   const [step, setStep]             = useState("idle");   // idle | processing | preview | error
   const [file, setFile]             = useState(null);
   const [progress, setProgress]     = useState({ stage: "", percent: 0 });
@@ -2214,6 +2214,7 @@ export default function App() {
   useEffect(() => {
     if (!walletId || soloMode) return;
 
+    // eslint-disable-next-line prefer-const
     let unsubCats, unsubWallet;
     setWalletLoading(true);
 
@@ -2337,14 +2338,6 @@ export default function App() {
     setLocalWalletId(id);
     setWalletId(id);
     setUserWallets(null); // ocultar selector
-  };
-
-  const handleLeaveWallet = () => {
-    leaveWallet();
-    clearLocalWalletId();
-    setWalletId(null);
-    setWalletData(null);
-    setCategories([]);
   };
 
   // ── Cerrar sesión completamente → volver al login ──────────────────────────
