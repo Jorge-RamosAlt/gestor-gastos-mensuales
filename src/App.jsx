@@ -37,7 +37,7 @@ function loadHistory() {
 
 function saveHistory(entries) {
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries)); }
-  catch (e) { console.warn("No se pudo guardar el historial:", e); }
+  catch (e) { if (import.meta.env.DEV) console.warn("[saveHistory]", e); }
 }
 
 // ── Formatters ──
@@ -2074,8 +2074,8 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // In production you'd send this to a monitoring service (Sentry, etc.)
-    console.error('[GastosApp] Error capturado por ErrorBoundary:', error, info);
+    // En producción: enviar a un servicio de monitoreo (Sentry, Datadog, etc.)
+    if (import.meta.env.DEV) console.error('[GastosApp] ErrorBoundary:', error, info);
   }
 
   render() {
@@ -2182,7 +2182,7 @@ export default function App() {
           }
         }
       } catch (err) {
-        console.warn('[Auth] No se pudo cargar el perfil:', err);
+        if (import.meta.env.DEV) console.warn('[Auth] No se pudo cargar el perfil:', err);
       }
 
       // ── Cartera: si hay walletId en localStorage (sesión F5) → usarlo ────
@@ -2199,7 +2199,7 @@ export default function App() {
           const wallets = await getUserWallets(user.uid);
           setUserWallets(wallets);
         } catch (err) {
-          console.warn('[Auth] No se pudo cargar carteras:', err);
+          if (import.meta.env.DEV) console.warn('[Auth] No se pudo cargar carteras:', err);
           setUserWallets([]);
         } finally {
           setWalletsLoading(false);
@@ -2251,7 +2251,7 @@ export default function App() {
         }
       },
       (err) => {
-        console.error('[Firestore]', err);
+        if (import.meta.env.DEV) console.error('[Firestore/categories]', err);
         setWalletLoading(false);
       }
     );
@@ -2291,7 +2291,7 @@ export default function App() {
       try {
         await saveCategories(walletId, categories, authUser);
       } catch (e) {
-        console.error('[Firestore save]', e);
+        if (import.meta.env.DEV) console.error('[Firestore/save]', e);
         setSyncToast({ text: 'Error al sincronizar', type: 'error' });
         setTimeout(() => setSyncToast(null), 3000);
       }
@@ -2306,7 +2306,7 @@ export default function App() {
     // 2. Guardar en Firestore (persistencia cross-device)
     if (authUser) {
       saveUserProfile(authUser.uid, profileData).catch((e) =>
-        console.warn('[Firestore] No se pudo guardar el perfil:', e)
+        if (import.meta.env.DEV) console.warn('[Firestore/saveProfile]', e)
       );
     }
 
@@ -2319,7 +2319,7 @@ export default function App() {
           : prev
         );
       } catch (e) {
-        console.warn('[Auth] No se pudo actualizar displayName:', e);
+        if (import.meta.env.DEV) console.warn('[Auth/displayName]', e);
       }
     }
 

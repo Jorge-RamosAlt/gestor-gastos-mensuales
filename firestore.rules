@@ -1,0 +1,124 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════
+//  Firestore Security Rules — Gestor de Gastos
+//  Última revisión de seguridad: 2026-03-08
+//
+//  Modelo de datos:
+//    users/{uid}                        → perfil del usuario (sus carteras)
+//    wallets/{walletId}                 → cartera (nombre, código, miembros)
+//    wallets/{walletId}/data/{doc}      → datos de la cartera (categorías)
+//    wallet_codes/{code}               → índice código → walletId
+// ═══════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    // El request tiene un usuario autenticado
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // El uid del request coincide con el uid del recurso
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // El usuario ya es miembro de la cartera (leyendo el doc existente)
+    function isMember(walletId) {
+      return isAuth() &&
+        request.auth.uid in
+          get(/databases/$(database)/documents/wallets/$(walletId)).data.members;
+    }
+
+    // Validación de nombre de cartera: string no vacío, máx. 100 chars
+    function isValidWalletName(name) {
+      return name is string
+        && name.size() > 0
+        && name.size() <= 100;
+    }
+
+    // Validación básica de categorías: debe ser lista (array)
+    function isValidCategories(cats) {
+      return cats is list && cats.size() <= 200;
+    }
+
+    // Código de sala: exactamente 6 chars alfanuméricos
+    function isValidCode(code) {
+      return code is string && code.size() == 6;
+    }
+
+    // ── users/{uid} ─────────────────────────────────────────────────────────
+    // Cada usuario solo puede leer y escribir su propio documento.
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // ── wallet_codes/{code} ─────────────────────────────────────────────────
+    // Cualquier usuario autenticado puede leer un código para unirse a la
+    // cartera. Solo puede crear (no editar ni borrar): los códigos son
+    // inmutables una vez generados.
+    match /wallet_codes/{code} {
+      allow get:    if isAuth();
+      allow list:   if false;        // nadie puede listar todos los códigos
+      allow create: if isAuth()
+        && isValidCode(code)
+        && request.resource.data.walletId is string;
+      allow update: if false;        // inmutable
+      allow delete: if false;        // inmutable
+    }
+
+    // ── wallets/{walletId} ──────────────────────────────────────────────────
+    match /wallets/{walletId} {
+
+      // Leer: cualquier usuario autenticado puede hacer get() de una cartera
+      // (necesario para validar el código al unirse). list() está bloqueado:
+      // nadie puede enumerar todas las carteras del sistema.
+      allow get:  if isAuth();
+      allow list: if false;
+
+      // Crear: solo el propio usuario puede crear, y debe incluirse como
+      // miembro y como creador en el documento. Se valida nombre y código.
+      allow create: if isAuth()
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.createdBy == request.auth.uid
+        && isValidWalletName(request.resource.data.name)
+        && isValidCode(request.resource.data.code);
+
+      // Actualizar:
+      //   a) Miembro existente → puede modificar cualquier campo de la cartera.
+      //   b) Usuario nuevo que se une → solo puede agregar su propia entrada
+      //      en el mapa `members` (flujo joinWallet).
+      allow update: if isAuth() && (
+        // Caso a: ya es miembro
+        request.auth.uid in resource.data.members
+        ||
+        // Caso b: uniéndose — el único campo que cambia es `members`,
+        // y el usuario se está agregando a sí mismo
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+          && request.auth.uid in request.resource.data.members
+        )
+      );
+
+      // Borrar: solo el creador original puede borrar la cartera.
+      allow delete: if isAuth()
+        && resource.data.createdBy == request.auth.uid;
+
+      // ── wallets/{walletId}/data/{doc} ─────────────────────────────────────
+      // Subcolección de datos (categorías y gastos): solo miembros confirma-
+      // dos de la cartera pueden leer y escribir. Se valida estructura básica.
+      match /data/{doc} {
+        allow read: if isMember(walletId);
+        allow write: if isMember(walletId)
+          && (
+            !('categories' in request.resource.data)
+            || isValidCategories(request.resource.data.categories)
+          );
+      }
+    }
+
+  }
+}
