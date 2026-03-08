@@ -2305,9 +2305,9 @@ export default function App() {
 
     // 2. Guardar en Firestore (persistencia cross-device)
     if (authUser) {
-      saveUserProfile(authUser.uid, profileData).catch((e) =>
-        if (import.meta.env.DEV) console.warn('[Firestore/saveProfile]', e)
-      );
+      saveUserProfile(authUser.uid, profileData).catch((e) => {
+        if (import.meta.env.DEV) console.warn('[Firestore/saveProfile]', e);
+      });
     }
 
     // 3. Sincronizar displayName en Firebase Auth
