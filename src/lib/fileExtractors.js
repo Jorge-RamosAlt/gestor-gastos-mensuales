@@ -297,6 +297,7 @@ async function extractDOCX(file, onProgress) {
     onProgress({ stage: 'Formato .doc: extrayendo texto básico…', percent: 40 });
     const text = await readFileAsText(file, 'latin1');
     const cleaned = text
+      // eslint-disable-next-line no-control-regex
       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();

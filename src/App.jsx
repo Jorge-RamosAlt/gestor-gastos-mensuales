@@ -568,6 +568,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
   // ── Cuando llegan categorías de Firestore, abrir las nuevas automáticamente ──
   useEffect(() => {
     if (!categories?.length) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpenCategories(prev => {
       let changed = false;
       const next = { ...prev };
@@ -602,7 +603,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
     setOpenCategories(prev => ({ ...prev, [catId]: true }));
     setImportSuccess({ count: items.length, catName: newCat.name });
     setActiveTab("gastos");
-  }, []);
+  }, [setCategories]);
 
   // ── Fullscreen ──
   const toggleFullscreen = useCallback(() => {

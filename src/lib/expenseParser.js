@@ -84,13 +84,13 @@ function findAmountsInText(text) {
 
 // ── Noise filters ─────────────────────────────────────────────────────────────
 const NOISE_WORDS = /^(total|subtotal|saldo|balance|iva|impuesto|tax|descuento|discount|fee|cargo fijo|s\/e|n\/a|na|-)$/i;
-const DATE_PATTERN = /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/;
+const DATE_PATTERN = /^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/;
 const SKIP_LINES   = /^\s*$|^page\s*\d|^página\s*\d|^\*+$|^-+$|^=+$/i;
 
 function cleanDescription(desc) {
   return desc
-    .replace(/[\$\d.,]+/g, '') // remove numbers/amounts
-    .replace(/[|\/\\*#@]+/g, ' ')
+    .replace(/[$\d.,]+/g, '') // remove numbers/amounts
+    .replace(/[|/\\*#@]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/^[-–:]+|[-–:]+$/g, '')
@@ -225,7 +225,7 @@ function inferTableColumns(rows) {
 
 // ── Strategy 2: Bank Statement (line-by-line) ─────────────────────────────────
 // Pattern: [DD/MM/YYYY] description [optional_ref] amount [balance]
-const DATE_RE   = /\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/;
+const DATE_RE   = /\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b/;
 const AMOUNT_RE = /\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,3}(?:\.\d{3})+|\d{4,}(?:,\d{2})?)/g;
 
 function parseAsBankStatement(lines) {
