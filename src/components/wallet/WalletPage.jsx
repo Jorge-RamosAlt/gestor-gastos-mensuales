@@ -4,7 +4,7 @@
  * Se muestra cuando el usuario no tiene cartera asignada.
  */
 import { useState } from 'react';
-import { createWallet, joinWallet } from '../lib/firestoreService';
+import { createWallet, joinWallet } from '../../lib/firestoreService';
 
 export default function WalletPage({ user, initialCategories, onWalletReady, onSoloMode }) {
   const [tab,          setTab]       = useState('create'); // 'create' | 'join'

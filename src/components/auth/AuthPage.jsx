@@ -20,8 +20,8 @@ import {
   sendEmailVerification,
   updateProfile,
 } from 'firebase/auth';
-import { auth } from '../lib/firebase';
-import { setSoloMode } from '../lib/firestoreService';
+import { auth } from '../../lib/firebase';
+import { setSoloMode } from '../../lib/firestoreService';
 
 const googleProvider = new GoogleAuthProvider();
 

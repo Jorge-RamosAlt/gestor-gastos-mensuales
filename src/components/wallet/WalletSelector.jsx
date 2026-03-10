@@ -10,8 +10,8 @@
  */
 import { useState } from 'react';
 import { signOut }  from 'firebase/auth';
-import { auth }     from '../lib/firebase';
-import { createWallet, joinWallet, clearLocalWalletId } from '../lib/firestoreService';
+import { auth }     from '../../lib/firebase';
+import { createWallet, joinWallet, clearLocalWalletId } from '../../lib/firestoreService';
 
 export default function WalletSelector({
   user,
