@@ -86,12 +86,44 @@ function TrendSVG({ months, target }) {
   );
 }
 
-function CompareTab({ categories, target }) {
+function CompareTab({ categories, target, firestoreHistory }) {
   const now       = new Date();
   const curYear   = now.getFullYear();
   const curMonth  = now.getMonth();
 
-  const [history, setHistoryState] = useState(loadHistory);
+  const [localHistory, setLocalHistory] = useState(loadHistory);
+
+  // Convertir entradas de Firestore al formato interno si están disponibles
+  const firestoreConverted = useMemo(() => {
+    if (!firestoreHistory) return null;
+    return firestoreHistory.map(entry => {
+      const date = new Date(entry.yearMonth + "-01T00:00:00");
+      return {
+        id:        entry.yearMonth,
+        label:     entry.label ?? entry.yearMonth,
+        year:      date.getFullYear(),
+        month:     date.getMonth(),
+        total:     entry.total ?? 0,
+        salary:    entry.salary ?? 0,
+        target:    entry.target ?? target,
+        breakdown: entry.categories
+          ? Object.fromEntries(entry.categories.map(c => [c.id, c.total]))
+          : {},
+      };
+    });
+  }, [firestoreHistory, target]);
+
+  const history = firestoreConverted ?? localHistory;
+
+  const setHistoryState = useCallback((updater) => {
+    if (firestoreConverted !== null) return; // read-only when Firestore is active
+    setLocalHistory(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      saveHistory(next);
+      return next;
+    });
+  }, [firestoreConverted]);
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [editId, setEditId]         = useState(null);
   const [formMonth, setFormMonth]   = useState(curMonth === 0 ? 11 : curMonth - 1);
@@ -137,7 +169,7 @@ function CompareTab({ categories, target }) {
 
   const persistHistory = (entries) => {
     setHistoryState(entries);
-    saveHistory(entries);
+    // setHistoryState ya llama saveHistory cuando es localStorage
   };
 
   const deleteHistoryEntry = (id) => {

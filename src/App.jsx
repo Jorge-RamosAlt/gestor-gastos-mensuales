@@ -1,7 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { extractFromFile, isFileSupported, SUPPORTED_EXTENSIONS } from "./lib/fileExtractors.js";
-import { parseExpenses } from "./lib/expenseParser.js";
-import { onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
+import { onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
 import { auth } from "./lib/firebase.js";
 import {
   getLocalWalletId, clearLocalWalletId, setLocalWalletId,
@@ -11,6 +9,7 @@ import {
   createWallet,
   getUserWallets, registerWalletForUser,
   saveUserProfile, getUserProfile,
+  subscribeToHistorial,
 } from "./lib/firestoreService.js";
 import { ToastProvider } from "./components/ui/ToastContainer.jsx";
 import AuthPage       from "./components/auth/AuthPage.jsx";
@@ -24,8 +23,10 @@ import GastosTab from "./components/gastos/GastosTab.jsx";
 import CompareTab from "./components/historial/CompareTab.jsx";
 import ImportTab from "./components/importar/ImportTab.jsx";
 import PlanTab from "./components/gastos/PlanTab.jsx";
+import ChartPanel from "./components/charts/ChartPanel.jsx";
+import { exportToCSV, exportToExcel } from "./lib/exportUtils.js";
 
-import { fmt, pct, getCurrentMonthLabel, monthLabel, MESES, fmtShort, fmtDelta, catFromEntry } from "./lib/formatters.js";
+import { fmt, pct, getCurrentMonthLabel } from "./lib/formatters.js";
 
 const PROFILE_KEY   = "gastos_perfil_v1";
 const HISTORY_KEY   = "gastos_historial_v1";
@@ -86,10 +87,70 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
   const [showResetModal, setShowResetModal] = useState(false);
   const [importSuccess, setImportSuccess]   = useState(null);
   const [darkMode, setDarkMode]             = useState(() => localStorage.getItem('darkMode') === 'true');
+  const [firestoreHistory, setFirestoreHistory] = useState(null); // null = no wallet, [] = empty
+  const [exportLoading, setExportLoading]   = useState(false);
+  const [showAddCat, setShowAddCat]         = useState(false);
+  const [newCatName, setNewCatName]         = useState("");
 
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
+
+  // Suscribir a historial de Firestore si hay cartera colaborativa
+  useEffect(() => {
+    if (!walletData?.id) { setFirestoreHistory(null); return; }
+    const unsub = subscribeToHistorial(
+      walletData.id,
+      (entries) => setFirestoreHistory(entries),
+      (err) => { if (import.meta.env.DEV) console.warn("[GastosApp] historial error", err); }
+    );
+    return unsub;
+  }, [walletData?.id]);
+
+  const handleAddCategory = () => {
+    const name = newCatName.trim();
+    if (!name) return;
+    const icons  = ["📦","🏠","🚗","🍽️","🛒","💊","🎓","✈️","👕","🐾"];
+    const colors = [
+      "bg-violet-50 border-violet-300","bg-cyan-50 border-cyan-300",
+      "bg-orange-50 border-orange-300","bg-pink-50 border-pink-300",
+    ];
+    const headers = [
+      "bg-violet-100","bg-cyan-100","bg-orange-100","bg-pink-100",
+    ];
+    const texts = [
+      "text-violet-800","text-cyan-800","text-orange-800","text-pink-800",
+    ];
+    const idx = Math.floor(Math.random() * 4);
+    const newCat = {
+      id: `cat_${Date.now()}`,
+      name: `${icons[Math.floor(Math.random() * icons.length)]} ${name}`,
+      icon: icons[Math.floor(Math.random() * icons.length)],
+      locked: false,
+      color:       colors[idx],
+      headerColor: headers[idx],
+      textColor:   texts[idx],
+      items: [],
+    };
+    setCategories(prev => [...prev, newCat]);
+    setNewCatName("");
+    setShowAddCat(false);
+  };
+
+  const handleExportCSV = () => {
+    const monthLabel_ = getCurrentMonthLabel();
+    exportToCSV(categories, profile, monthLabel_);
+  };
+
+  const handleExportExcel = async () => {
+    setExportLoading(true);
+    try {
+      const monthLabel_ = getCurrentMonthLabel();
+      await exportToExcel(categories, profile, monthLabel_);
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   const handleImport = useCallback((items, sourceFilename) => {
     const catId  = `importados_${Date.now()}`;
@@ -298,10 +359,12 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
           <div className="flex gap-2 border-b border-gray-200 dark:border-slate-700 mb-4 overflow-x-auto">
             {[
               { id: "gastos",          label: "📋 Mis Gastos" },
-              { id: "recomendaciones", label: "💡 Recomendaciones" },
-              { id: "plan",            label: "🎯 Plan de Ajuste" },
+              { id: "graficos",        label: "📊 Gráficos" },
+              { id: "comparar",        label: "🗓️ Historial" },
               { id: "importar",        label: "📂 Importar" },
-              { id: "comparar",        label: "📊 Comparar" },
+              { id: "exportar",        label: "⬇️ Exportar" },
+              { id: "recomendaciones", label: "💡 Tips" },
+              { id: "plan",            label: "🎯 Plan" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -319,12 +382,119 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
 
           {/* ─── TAB: GASTOS ─── */}
           {activeTab === "gastos" && (
-            <GastosTab
+            <div>
+              <GastosTab
+                categories={categories}
+                setCategories={setCategories}
+                total={total}
+                TARGET={TARGET}
+              />
+              {/* Agregar categoría */}
+              <div className="mt-4 pb-8">
+                {showAddCat ? (
+                  <div className="flex items-center gap-2 p-3 bg-white dark:bg-slate-800 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-xl">
+                    <input
+                      autoFocus
+                      className="flex-1 text-sm border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      placeholder="Nombre de la categoría..."
+                      value={newCatName}
+                      onChange={e => setNewCatName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") handleAddCategory();
+                        if (e.key === "Escape") { setShowAddCat(false); setNewCatName(""); }
+                      }}
+                    />
+                    <button
+                      onClick={handleAddCategory}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
+                    >Crear</button>
+                    <button
+                      onClick={() => { setShowAddCat(false); setNewCatName(""); }}
+                      className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 text-lg font-bold px-2"
+                    >×</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAddCat(true)}
+                    className="w-full border-2 border-dashed border-gray-300 dark:border-slate-600 text-gray-400 dark:text-slate-500 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 rounded-xl py-3 text-sm font-medium transition"
+                  >
+                    ＋ Agregar categoría
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ─── TAB: GRÁFICOS ─── */}
+          {activeTab === "graficos" && (
+            <ChartPanel
               categories={categories}
-              setCategories={setCategories}
-              total={total}
-              TARGET={TARGET}
+              history={firestoreHistory ?? []}
+              target={TARGET}
+              salary={SALARY_ACTUAL}
             />
+          )}
+
+          {/* ─── TAB: HISTORIAL / COMPARAR ─── */}
+          {activeTab === "comparar" && (
+            <CompareTab
+              categories={categories}
+              target={TARGET}
+              walletId={walletData?.id ?? null}
+              firestoreHistory={firestoreHistory}
+            />
+          )}
+
+          {/* ─── TAB: IMPORTAR ─── */}
+          {activeTab === "importar" && (
+            <ImportTab
+              categories={categories}
+              onImport={handleImport}
+            />
+          )}
+
+          {/* ─── TAB: EXPORTAR ─── */}
+          {activeTab === "exportar" && (
+            <div className="pb-8 space-y-4">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
+                <h3 className="font-bold text-gray-700 dark:text-slate-200 text-base mb-1">⬇️ Exportar gastos del mes</h3>
+                <p className="text-sm text-gray-400 dark:text-slate-500 mb-6">
+                  Descargá tus gastos de {getCurrentMonthLabel()} en el formato que prefieras.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button
+                    onClick={handleExportCSV}
+                    className="flex items-center gap-3 p-4 border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 rounded-xl hover:border-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition text-left"
+                  >
+                    <span className="text-3xl">📄</span>
+                    <div>
+                      <p className="font-bold text-green-700 dark:text-green-400 text-sm">Exportar CSV</p>
+                      <p className="text-xs text-green-600 dark:text-green-500">Compatible con Excel, Google Sheets</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleExportExcel}
+                    disabled={exportLoading}
+                    className="flex items-center gap-3 p-4 border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 rounded-xl hover:border-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition text-left disabled:opacity-50"
+                  >
+                    <span className="text-3xl">📊</span>
+                    <div>
+                      <p className="font-bold text-blue-700 dark:text-blue-400 text-sm">
+                        {exportLoading ? "Generando..." : "Exportar Excel (.xlsx)"}
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-500">Con formato, colores y totales</p>
+                    </div>
+                  </button>
+                </div>
+                <div className="mt-4 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
+                    📌 El archivo incluye: {categories.length} categorías,{" "}
+                    {categories.reduce((s, c) => s + c.items.length, 0)} ítems,{" "}
+                    total {fmt(total)}
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* ─── TAB: RECOMENDACIONES ─── */}
@@ -347,22 +517,6 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
           {/* ─── TAB: PLAN ─── */}
           {activeTab === "plan" && (
             <PlanTab total={total} TARGET={TARGET} />
-          )}
-
-          {/* ─── TAB: IMPORTAR ─── */}
-          {activeTab === "importar" && (
-            <ImportTab
-              categories={categories}
-              onImport={handleImport}
-            />
-          )}
-
-          {/* ─── TAB: COMPARAR ─── */}
-          {activeTab === "comparar" && (
-            <CompareTab
-              categories={categories}
-              target={TARGET}
-            />
           )}
 
         </div>
