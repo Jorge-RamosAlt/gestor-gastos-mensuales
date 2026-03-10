@@ -10,8 +10,8 @@
  */
 
 import {
-  doc, setDoc, getDoc, updateDoc,
-  collection, onSnapshot, serverTimestamp,
+  doc, setDoc, getDoc, updateDoc, deleteDoc,
+  collection, onSnapshot, serverTimestamp, query, orderBy,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -226,4 +226,45 @@ export async function getUserProfile(uid) {
   const snap = await getDoc(doc(db, 'users', uid));
   if (!snap.exists()) return null;
   return snap.data()?.profile ?? null;
+}
+
+// ── Guardar entrada de historial mensual en Firestore ────────────────────────────
+// Estructura: wallets/{walletId}/historial/{yearMonth}
+// yearMonth format: "2026-02"
+export async function saveHistorialMonth(walletId, user, monthData) {
+  const { yearMonth, label, total, salary, target, categories } = monthData;
+  await setDoc(
+    doc(db, 'wallets', walletId, 'historial', yearMonth),
+    {
+      yearMonth,
+      label,
+      total,
+      salary,
+      target,
+      categories: categories ?? [],
+      savedAt: serverTimestamp(),
+      savedBy: user.uid,
+      savedByName: user.displayName,
+    }
+  );
+}
+
+// ── Eliminar entrada de historial ───────────────────────────────────────────────
+export async function deleteHistorialMonth(walletId, yearMonth) {
+  await deleteDoc(doc(db, 'wallets', walletId, 'historial', yearMonth));
+}
+
+// ── Suscribirse a historial de una cartera en tiempo real ──────────────────────
+// Devuelve un array de objetos ordenados por yearMonth desc
+export function subscribeToHistorial(walletId, onUpdate, onError) {
+  const ref = collection(db, 'wallets', walletId, 'historial');
+  const q = query(ref, orderBy('yearMonth', 'desc'));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const entries = snap.docs.map(d => d.data());
+      onUpdate(entries);
+    },
+    (err) => { if (onError) onError(err); }
+  );
 }

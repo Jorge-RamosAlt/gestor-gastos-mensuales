@@ -1,0 +1,22 @@
+🚀 Guía rápida para arrancar el Dashboard de Gastos
+Hola, te paso el proyecto del Dashboard de Gastos en React + Vite + Tailwind CSS. Seguí estos pasos para verlo andar en tu compu:
+
+Descomprimí el archivo ZIP en una carpeta (ejemplo: en tu Escritorio).
+
+Abrí Visual Studio Code.
+
+Andá a File > Open Folder y seleccioná la carpeta que descomprimiste.
+
+Abrí la terminal en VS Code (Menú Terminal > New Terminal).
+
+Escribí este comando para descargar las librerías necesarias:
+
+Bash
+npm install
+Una vez que termine, escribí esto para prender la app:
+
+Bash
+npm run dev
+Hacé Ctrl + Clic en el link que te aparezca (http://localhost:5173/) y ¡listo!
+
+Nota: Para cargar tus propios datos, solo tenés que editar las variables TARGET, SALARY_ACTUAL y la lista INITIAL_CATEGORIES dentro del archivo src/App.jsx.

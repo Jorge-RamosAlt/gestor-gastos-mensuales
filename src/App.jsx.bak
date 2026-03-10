@@ -8,23 +8,24 @@ import {
   getSoloMode, setSoloMode,
   saveCategories,
   subscribeToCategories, subscribeToWallet,
-  createWallet,
+  leaveWallet, createWallet,
   getUserWallets, registerWalletForUser,
   saveUserProfile, getUserProfile,
 } from "./lib/firestoreService.js";
-import { ToastProvider } from "./components/ui/ToastContainer.jsx";
-import AuthPage       from "./components/auth/AuthPage.jsx";
-import WalletPage     from "./components/wallet/WalletPage.jsx";
-import WalletSelector from "./components/wallet/WalletSelector.jsx";
+import AuthPage       from "./components/AuthPage.jsx";
+import WalletPage     from "./components/WalletPage.jsx";
+import WalletSelector from "./components/WalletSelector.jsx";
 
 // ── Storage keys ──
 const PROFILE_KEY   = "gastos_perfil_v1";
 const HISTORY_KEY   = "gastos_historial_v1";
 
-// Import formatters from lib
-import { fmt, pct, getCurrentMonthLabel, monthLabel, MESES, fmtShort, fmtDelta, catFromEntry } from "./lib/formatters.js";
+// ── Calendar helpers ──
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+               "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-// Legacy function for localStorage history (kept for backward compatibility)
+function monthLabel(month, year) { return `${MESES[month]} ${year}`; }
+
 function loadHistory() {
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
@@ -38,6 +39,23 @@ function saveHistory(entries) {
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries)); }
   catch (e) { if (import.meta.env.DEV) console.warn("[saveHistory]", e); }
 }
+
+// ── Formatters ──
+const fmt = (n) =>
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(n);
+
+const pct = (part, total) =>
+  total > 0 ? Math.round((part / total) * 100) : 0;
+
+const getCurrentMonthLabel = () => {
+  const now = new Date();
+  return now.toLocaleString("es-AR", { month: "long", year: "numeric" });
+};
 
 // ── Initial expense data ──
 const INITIAL_CATEGORIES = [];
@@ -1055,7 +1073,27 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
 // COMPARE TAB — helpers
 // ─────────────────────────────────────────────
 
-// catFromEntry, fmtDelta, fmtShort are imported from lib/formatters.js
+/** Given a history entry, return category total (from breakdown or proportional estimate) */
+function catFromEntry(entry, catId, currentCats, currentTotal) {
+  if (!entry) return 0;
+  if (entry.breakdown?.[catId] !== undefined) return entry.breakdown[catId];
+  const cat = currentCats.find(c => c.id === catId);
+  if (!cat || currentTotal === 0) return 0;
+  return Math.round(entry.total * (cat.total / currentTotal));
+}
+
+function fmtDelta(cur, prev) {
+  if (!prev) return null;
+  const d   = cur - prev;
+  const pct = Math.round((d / prev) * 100);
+  return { d, pct, up: d > 0 };
+}
+
+function fmtShort(n) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}k`;
+  return `$${n}`;
+}
 
 // ── SVG Trend Line ────────────────────────────────────────────────────────────
 function TrendSVG({ months, target }) {
@@ -2081,7 +2119,7 @@ class ErrorBoundary extends React.Component {
 // ─────────────────────────────────────────────
 // ROOT — auth + wallet + perfil + routing
 // ─────────────────────────────────────────────
-function App() {
+export default function App() {
   // ── Auth state ──
   const [authUser,    setAuthUser]    = useState(undefined); // undefined = cargando
   const [soloMode,    setSoloModeS]   = useState(getSoloMode);
@@ -2176,8 +2214,8 @@ function App() {
   useEffect(() => {
     if (!walletId || soloMode) return;
 
-    let unsubWallet = null;
-    let unsubCats = null;
+    // eslint-disable-next-line prefer-const
+    let unsubCats, unsubWallet;
     setWalletLoading(true);
 
     // Listener de la cartera (nombre, miembros)
@@ -2521,14 +2559,3 @@ function PlanPhase({ phase, title, color, headerColor, textColor, items, totalSa
     </div>
   );
 }
-
-// Main wrapper with Toast Provider
-function AppWrapper() {
-  return (
-    <ToastProvider>
-      <App />
-    </ToastProvider>
-  );
-}
-
-export default AppWrapper;
