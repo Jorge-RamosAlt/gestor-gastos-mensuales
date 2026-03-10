@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { fmt, pct, fmtShort, fmtDelta, monthLabel, MESES, catFromEntry } from "../../lib/formatters.js";
+import { useToast } from "../../hooks/useToast.js";
 
 function loadHistory() {
   try {
@@ -87,6 +88,7 @@ function TrendSVG({ months, target }) {
 }
 
 function CompareTab({ categories, target, firestoreHistory }) {
+  const toast = useToast();
   const now       = new Date();
   const curYear   = now.getFullYear();
   const curMonth  = now.getMonth();
@@ -174,6 +176,7 @@ function CompareTab({ categories, target, firestoreHistory }) {
 
   const deleteHistoryEntry = (id) => {
     persistHistory(history.filter(h => h.id !== id));
+    toast.info('Entrada eliminada del historial');
   };
 
   const saveCurrentMonth = () => {
@@ -187,6 +190,7 @@ function CompareTab({ categories, target, firestoreHistory }) {
       breakdown: Object.fromEntries(currentCats.map(c => [c.id, c.total])),
     };
     persistHistory([...history.filter(h => h.id !== id), entry]);
+    toast.success('Mes guardado en el historial ✅');
   };
 
   const openAddForm = (existingId = null) => {
@@ -245,6 +249,7 @@ function CompareTab({ categories, target, firestoreHistory }) {
       breakdown: useBreakdown ? { ...breakdownVals } : null,
     };
     persistHistory([...history.filter(h => h.id !== id), entry]);
+    toast.success('Mes guardado ✅');
     closeForm();
   };
 

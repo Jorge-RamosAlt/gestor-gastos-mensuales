@@ -1,15 +1,36 @@
 import React, { useState } from "react";
 import { fmt, pct } from "../../lib/formatters.js";
+import { useToast } from "../../hooks/useToast.js";
 
 function CategoryCard({ category, total, onUpdate, onDelete }) {
+  const toast = useToast();
   const [isOpen, setIsOpen] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [newItemAmount, setNewItemAmount] = useState("");
+  const [showBudgetEdit, setShowBudgetEdit] = useState(false);
+  const [budgetValue, setBudgetValue] = useState("");
 
   const catTotal = category.items.reduce((s, i) => s + i.amount, 0);
+  const recurringCount = category.items.filter(i => i.recurring).length;
+  const budget = category.budget || 0;
+  const overBudget = budget > 0 && catTotal > budget;
+  const overAmount = overBudget ? catTotal - budget : 0;
+
+  const setBudget = () => {
+    const val = parseInt(budgetValue.replace(/\D/g, ""), 10);
+    if (!isNaN(val) && val >= 0) {
+      const updatedCat = { ...category, budget: val };
+      onUpdate(updatedCat);
+      if (val > 0 && catTotal > val) {
+        toast.warning(`⚠️ ${category.name} superó el presupuesto por ${fmt(catTotal - val)}`);
+      }
+      setShowBudgetEdit(false);
+      setBudgetValue("");
+    }
+  };
 
   const startEdit = (itemId, currentAmount) => {
     setEditingId(itemId);
@@ -30,6 +51,14 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
   const deleteItem = (itemId) => {
     const updatedItems = category.items.filter(item => item.id !== itemId);
     onUpdate({ ...category, items: updatedItems });
+    toast.info('Ítem eliminado');
+  };
+
+  const toggleRecurring = (itemId) => {
+    const updatedItems = category.items.map(item =>
+      item.id === itemId ? { ...item, recurring: !item.recurring } : item
+    );
+    onUpdate({ ...category, items: updatedItems });
   };
 
   const addItem = () => {
@@ -43,6 +72,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
     };
     const updatedItems = [...category.items, newItem];
     onUpdate({ ...category, items: updatedItems });
+    toast.success('Gasto agregado ✅');
     setNewItemName("");
     setNewItemAmount("");
     setShowAddForm(false);
@@ -58,18 +88,44 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
           <span className="text-lg">{category.icon}</span>
           <span className={`font-semibold text-sm ${category.textColor}`}>{category.name}</span>
           {category.locked && <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded-full">FIJO</span>}
+          {recurringCount > 0 && <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-semibold">🔁 {recurringCount}</span>}
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`font-bold text-sm ${category.textColor}`}>{fmt(catTotal)}</span>
-          <span className="text-gray-400 text-xs">{pct(catTotal, total)}% del total</span>
-          {!category.locked && onDelete && (
-            <button
-              onClick={(e) => { e.stopPropagation(); if (window.confirm(`¿Eliminar categoría "${category.name}"?`)) onDelete(category.id); }}
-              title="Eliminar categoría"
-              className="text-red-400 hover:text-red-600 text-xs px-1 opacity-0 group-hover:opacity-100 transition"
-            >🗑</button>
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            {budget > 0 && (
+              <div className="text-xs text-gray-600 font-medium">
+                🎯 {fmt(catTotal)} / {fmt(budget)}
+              </div>
+            )}
+            {overBudget && (
+              <span className="text-xs font-bold text-red-600">🚨 +{fmt(overAmount)} sobre presupuesto</span>
+            )}
+            {!category.locked && onDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`¿Eliminar categoría "${category.name}"?`)) {
+                    onDelete(category.id);
+                    toast.info(`Categoría "${category.name}" eliminada`);
+                  }
+                }}
+                title="Eliminar categoría"
+                className="text-red-400 hover:text-red-600 text-xs px-1 opacity-0 group-hover:opacity-100 transition"
+              >🗑</button>
+            )}
+            <span className="text-gray-500">{isOpen ? "▲" : "▼"}</span>
+          </div>
+          {budget > 0 && (
+            <div className="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all ${
+                  catTotal > budget ? 'bg-red-500' : catTotal > budget * 0.8 ? 'bg-amber-500' : 'bg-green-500'
+                }`}
+                style={{ width: `${Math.min(100, (catTotal / budget) * 100)}%` }}
+              />
+            </div>
           )}
-          <span className="text-gray-500">{isOpen ? "▲" : "▼"}</span>
+          <span className={`text-gray-500 text-xs`}>{pct(catTotal, total)}% del total</span>
         </div>
       </button>
 
@@ -82,6 +138,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                   {item.locked && <span className="text-gray-400 text-xs">🔒</span>}
                   {item.alert && !item.locked && <span className="text-xs">⚠️</span>}
                   <span className="text-sm text-gray-700">{item.name}</span>
+                  {item.recurring && <span className="text-teal-600 text-xs font-semibold">🔁</span>}
                 </div>
                 {item.note && <p className="text-xs text-gray-400 mt-0.5">{item.note}</p>}
               </div>
@@ -114,6 +171,15 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                     >
                       {fmt(item.amount)}
                     </button>
+                    {!item.locked && (
+                      <button
+                        onClick={() => toggleRecurring(item.id)}
+                        className="text-gray-400 hover:text-teal-600 transition opacity-0 group-hover:opacity-100"
+                        title="Gasto recurrente — se mantiene cada mes"
+                      >
+                        🔁
+                      </button>
+                    )}
                     <button
                       onClick={() => deleteItem(item.id)}
                       className="text-gray-400 hover:text-red-500 transition text-lg leading-none opacity-0 group-hover:opacity-100"
@@ -126,6 +192,53 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
               </div>
             </div>
           ))}
+
+          {/* Budget setting section */}
+          {showBudgetEdit ? (
+            <div className="px-4 py-3 bg-amber-50 border-t-2 border-amber-200 flex gap-2 items-center">
+              <input
+                autoFocus
+                type="text"
+                inputMode="numeric"
+                placeholder="Presupuesto (dejar vacío para eliminar)"
+                value={budgetValue}
+                onChange={(e) => setBudgetValue(e.target.value.replace(/\D/g, ""))}
+                className="flex-1 border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setBudget();
+                  if (e.key === "Escape") {
+                    setShowBudgetEdit(false);
+                    setBudgetValue("");
+                  }
+                }}
+              />
+              <button
+                onClick={setBudget}
+                className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg transition text-sm"
+              >
+                ✓
+              </button>
+              <button
+                onClick={() => {
+                  setShowBudgetEdit(false);
+                  setBudgetValue("");
+                }}
+                className="border-2 border-gray-300 text-gray-600 font-bold px-3 py-1.5 rounded-lg hover:bg-gray-100 transition text-sm"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setShowBudgetEdit(true);
+                setBudgetValue(budget ? String(budget) : "");
+              }}
+              className="w-full px-4 py-2.5 text-left text-sm text-amber-700 hover:bg-amber-50 transition font-medium flex items-center gap-2 border-t border-gray-200"
+            >
+              ⚙️ {budget > 0 ? `Presupuesto: ${fmt(budget)}` : "Establecer presupuesto"}
+            </button>
+          )}
 
           {/* Add item form */}
           {showAddForm ? (

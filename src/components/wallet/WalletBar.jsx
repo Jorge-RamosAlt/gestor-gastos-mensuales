@@ -1,12 +1,15 @@
 import React, { useState } from "react";
+import { useToast } from "../../hooks/useToast.js";
 
 function WalletBar({ walletData, authUser, onLeave, onChangeWallet }) {
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
   const members = Object.entries(walletData?.members ?? {});
 
   const copyCode = () => {
     navigator.clipboard?.writeText(walletData.code ?? '').catch(() => {});
     setCopied(true);
+    toast.success('Código copiado al portapapeles');
     setTimeout(() => setCopied(false), 2000);
   };
 

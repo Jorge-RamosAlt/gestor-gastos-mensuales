@@ -15,8 +15,19 @@ function GastosTab({ categories, setCategories, total, TARGET }) {
     setCategories(prev => prev.filter(cat => cat.id !== catId));
   };
 
+  const overBudgetCats = categories.filter(cat => {
+    if (!cat.budget || cat.budget <= 0) return false;
+    const catTotal = cat.items.reduce((s, i) => s + i.amount, 0);
+    return catTotal > cat.budget;
+  });
+
   return (
     <div className="space-y-3 pb-8">
+      {overBudgetCats.length > 0 && (
+        <div className="bg-red-50 border border-red-300 rounded-xl p-3 mb-3 text-sm text-red-700">
+          🚨 <strong>{overBudgetCats.length} categoría(s)</strong> superaron su presupuesto: {overBudgetCats.map(c => c.name).join(', ')}
+        </div>
+      )}
       <p className="text-sm text-gray-500 mb-2">
         Hacé clic en cualquier monto para editarlo. Los ítems con 🔒 son inamovibles. Los cambios actualizan el total en tiempo real.
       </p>

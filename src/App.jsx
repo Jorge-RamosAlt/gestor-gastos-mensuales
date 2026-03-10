@@ -12,6 +12,7 @@ import {
   subscribeToHistorial,
 } from "./lib/firestoreService.js";
 import { ToastProvider } from "./components/ui/ToastContainer.jsx";
+import { useToast } from "./hooks/useToast.js";
 import AuthPage       from "./components/auth/AuthPage.jsx";
 import WalletPage     from "./components/wallet/WalletPage.jsx";
 import WalletSelector from "./components/wallet/WalletSelector.jsx";
@@ -78,6 +79,7 @@ function SummaryCard({ label, value, sub, color, icon, border }) {
 }
 
 function GastosApp({ profile, onReset, categories, setCategories, walletData, authUser, onLeaveWallet, onChangeWallet, onShareRequest }) {
+  const toast = useToast();
   const TARGET        = profile.salaryTarget;
   const SALARY_ACTUAL = profile.salaryActual;
   const SALARY_NUEVO  = profile.salaryTarget;
@@ -85,7 +87,6 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
   const [activeTab, setActiveTab]           = useState("gastos");
   const [isFullscreen, setIsFullscreen]     = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
-  const [importSuccess, setImportSuccess]   = useState(null);
   const [darkMode, setDarkMode]             = useState(() => localStorage.getItem('darkMode') === 'true');
   const [firestoreHistory, setFirestoreHistory] = useState(null); // null = no wallet, [] = empty
   const [exportLoading, setExportLoading]   = useState(false);
@@ -172,9 +173,9 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
       })),
     };
     setCategories(prev => [...prev, newCat]);
-    setImportSuccess({ count: items.length, catName: newCat.name });
+    toast.success(`✅ ${items.length} gastos importados en "${newCat.name}"`);
     setActiveTab("gastos");
-  }, [setCategories]);
+  }, [setCategories, toast]);
 
   const toggleFullscreen = useCallback(() => {
     try {
@@ -220,16 +221,6 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
           />
         )}
 
-        {importSuccess && (
-          <div className="fixed bottom-6 right-6 z-50 bg-teal-600 dark:bg-teal-700 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 animate-pulse">
-            <span className="text-xl">✅</span>
-            <div>
-              <p className="font-bold text-sm">{importSuccess.count} gastos importados</p>
-              <p className="text-teal-200 text-xs">{importSuccess.catName} → Mis Gastos</p>
-            </div>
-            <button onClick={() => setImportSuccess(null)} className="ml-2 text-teal-200 hover:text-white text-lg font-bold">×</button>
-          </div>
-        )}
 
         {/* ─── HEADER ─── */}
         <div className="bg-gradient-to-r from-slate-800 to-slate-700 dark:from-slate-900 dark:to-slate-800 text-white px-4 sm:px-6 py-5 shadow-lg">
@@ -597,8 +588,8 @@ function App() {
     } catch { return null; }
   });
 
-  const [syncToast, setSyncToast] = useState(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const appToast = useToast();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -678,8 +669,7 @@ function App() {
           setExternalUpdate(data);
           if (data.updatedBy !== authUser?.uid) {
             const name = data.updatedByName ?? 'Alguien';
-            setSyncToast({ text: `${name} actualizó los gastos`, type: 'sync' });
-            setTimeout(() => setSyncToast(null), 3500);
+            appToast.info(`${name} actualizó los gastos`);
           }
         }
       },
@@ -722,8 +712,7 @@ function App() {
         await saveCategories(walletId, categories, authUser);
       } catch (e) {
         if (import.meta.env.DEV) console.error('[Firestore/save]', e);
-        setSyncToast({ text: 'Error al sincronizar', type: 'error' });
-        setTimeout(() => setSyncToast(null), 3000);
+        appToast.error('Error al sincronizar');
       }
     }, 800);
   }, [categories, walletId, soloMode, authUser]);
@@ -881,21 +870,6 @@ function App() {
 
   return (
     <ErrorBoundary>
-      {syncToast && (
-        <div className={`
-          fixed top-4 left-1/2 -translate-x-1/2 z-[100]
-          px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium
-          flex items-center gap-2 pointer-events-none
-          animate-fade-in-down
-          ${syncToast.type === 'error'
-            ? 'bg-red-900/90 text-red-200 border border-red-700'
-            : 'bg-slate-800/90 text-slate-200 border border-slate-600'}
-        `}>
-          <span>{syncToast.type === 'sync' ? '🔄' : '⚠️'}</span>
-          {syncToast.text}
-        </div>
-      )}
-
       {showShareModal && (
         <ShareModal
           currentCategories={categories}
