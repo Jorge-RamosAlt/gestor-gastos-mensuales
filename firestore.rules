@@ -118,6 +118,20 @@ service cloud.firestore {
             || isValidCategories(request.resource.data.categories)
           );
       }
+
+      // ── wallets/{walletId}/historial/{yearMonth} ───────────────────────────
+      // Historial mensual: solo miembros confirmados pueden leer, crear,
+      // actualizar y borrar entradas de historial.
+      // yearMonth debe ser un string con formato "YYYY-MM" (7 chars)
+      match /historial/{yearMonth} {
+        allow read: if isMember(walletId);
+        allow create, update: if isMember(walletId)
+          && yearMonth is string
+          && yearMonth.size() == 7
+          && request.resource.data.total is number
+          && request.resource.data.yearMonth == yearMonth;
+        allow delete: if isMember(walletId);
+      }
     }
 
   }
