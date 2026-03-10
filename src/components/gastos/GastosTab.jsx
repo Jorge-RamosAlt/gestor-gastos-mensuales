@@ -1,11 +1,9 @@
 import React from "react";
-import { fmt, pct } from "../../lib/formatters.js";
+import { fmt } from "../../lib/formatters.js";
 import CategoryCard from "./CategoryCard.jsx";
 
 function GastosTab({ categories, setCategories, total, TARGET }) {
   const gap = total - TARGET;
-
-  const catTotal = (cat) => cat.items.reduce((s, i) => s + i.amount, 0);
 
   const handleCategoryUpdate = (updatedCat) => {
     setCategories(prev =>

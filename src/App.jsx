@@ -183,7 +183,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
       } else {
         document.exitFullscreen();
       }
-    } catch { }
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
@@ -729,7 +729,7 @@ function App() {
   }, [categories, walletId, soloMode, authUser]);
 
   const handleSetup = async (profileData) => {
-    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profileData)); } catch { }
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profileData)); } catch { /* ignore */ }
 
     if (authUser) {
       saveUserProfile(authUser.uid, profileData).catch((e) => {
@@ -753,7 +753,7 @@ function App() {
   };
 
   const handleReset = () => {
-    try { localStorage.removeItem(PROFILE_KEY); } catch { }
+    try { localStorage.removeItem(PROFILE_KEY); } catch { /* ignore */ }
     setProfile(null);
   };
 

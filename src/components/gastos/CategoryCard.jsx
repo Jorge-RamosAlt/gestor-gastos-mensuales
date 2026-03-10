@@ -51,7 +51,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
   return (
     <div className={`rounded-xl border-2 overflow-hidden shadow-sm ${category.color}`}>
       <button
-        className={`w-full flex items-center justify-between px-4 py-3 ${category.headerColor} hover:brightness-95 transition`}
+        className={`group w-full flex items-center justify-between px-4 py-3 ${category.headerColor} hover:brightness-95 transition`}
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-2">
@@ -59,9 +59,16 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
           <span className={`font-semibold text-sm ${category.textColor}`}>{category.name}</span>
           {category.locked && <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded-full">FIJO</span>}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <span className={`font-bold text-sm ${category.textColor}`}>{fmt(catTotal)}</span>
           <span className="text-gray-400 text-xs">{pct(catTotal, total)}% del total</span>
+          {!category.locked && onDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); if (window.confirm(`¿Eliminar categoría "${category.name}"?`)) onDelete(category.id); }}
+              title="Eliminar categoría"
+              className="text-red-400 hover:text-red-600 text-xs px-1 opacity-0 group-hover:opacity-100 transition"
+            >🗑</button>
+          )}
           <span className="text-gray-500">{isOpen ? "▲" : "▼"}</span>
         </div>
       </button>

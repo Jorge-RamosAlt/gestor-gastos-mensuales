@@ -13,7 +13,7 @@ const PIE_COLORS = [
   "#f97316","#a78bfa","#34d399","#fb923c",
 ];
 
-function CustomPieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) {
+function CustomPieLabel({ cx, cy, midAngle, outerRadius, percent, name }) {
   const RADIAN = Math.PI / 180;
   const radius = outerRadius + 24;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
