@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind v4: class-based dark mode */
+@variant dark (&:where(.dark, .dark *));
+
 @keyframes fade-in-down {
   from { opacity: 0; transform: translate(-50%, -12px); }
   to   { opacity: 1; transform: translate(-50%, 0); }

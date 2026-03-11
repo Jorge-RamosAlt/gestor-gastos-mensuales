@@ -125,7 +125,12 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
   const activeTab = pathToTab[location.pathname] || 'gastos';
   const [isFullscreen, setIsFullscreen]     = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
-  const [darkMode, setDarkMode]             = useState(() => localStorage.getItem('darkMode') === 'true');
+  const [darkMode, setDarkMode]             = useState(() => {
+    const saved = localStorage.getItem('darkMode') === 'true';
+    if (saved) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+    return saved;
+  });
   const [firestoreHistory, setFirestoreHistory] = useState(null); // null = no wallet, [] = empty
   const [exportLoading, setExportLoading]   = useState(false);
   const [showAddCat, setShowAddCat]         = useState(false);
@@ -134,6 +139,11 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
 
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode);
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, [darkMode]);
 
   // Suscribir a historial de Firestore si hay cartera colaborativa
@@ -273,7 +283,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
   const monthLabel_ = getCurrentMonthLabel();
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark' : ''}`}>
+    <div className="min-h-screen">
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 font-sans">
 
         {showResetModal && (
