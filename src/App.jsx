@@ -208,8 +208,8 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
     };
     setCategories(prev => [...prev, newCat]);
     toast.success(`✅ ${items.length} gastos importados en "${newCat.name}"`);
-    setActiveTab("gastos");
-  }, [setCategories, toast]);
+    navigate('/');
+  }, [setCategories, toast, navigate]);
 
   const toggleFullscreen = useCallback(() => {
     try {
