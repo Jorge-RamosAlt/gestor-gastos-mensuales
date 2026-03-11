@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useNavigate, useLocation, Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
 import { auth } from "./lib/firebase.js";
 import {
@@ -28,6 +29,7 @@ import ChartPanel from "./components/charts/ChartPanel.jsx";
 import { exportToCSV, exportToExcel } from "./lib/exportUtils.js";
 
 import { fmt, pct, getCurrentMonthLabel } from "./lib/formatters.js";
+import { exportToPDF } from "./lib/exportPDF.js";
 
 const PROFILE_KEY   = "gastos_perfil_v1";
 const HISTORY_KEY   = "gastos_historial_v1";
@@ -80,11 +82,33 @@ function SummaryCard({ label, value, sub, color, icon, border }) {
 
 function GastosApp({ profile, onReset, categories, setCategories, walletData, authUser, onLeaveWallet, onChangeWallet, onShareRequest }) {
   const toast = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
   const TARGET        = profile.salaryTarget;
   const SALARY_ACTUAL = profile.salaryActual;
   const SALARY_NUEVO  = profile.salaryTarget;
 
-  const [activeTab, setActiveTab]           = useState("gastos");
+  const pathToTab = {
+    '/': 'gastos',
+    '/graficos': 'graficos',
+    '/historial': 'comparar',
+    '/importar': 'importar',
+    '/exportar': 'exportar',
+    '/tips': 'recomendaciones',
+    '/plan': 'plan',
+  };
+
+  const tabToPath = {
+    'gastos': '/',
+    'graficos': '/graficos',
+    'comparar': '/historial',
+    'importar': '/importar',
+    'exportar': '/exportar',
+    'recomendaciones': '/tips',
+    'plan': '/plan',
+  };
+
+  const activeTab = pathToTab[location.pathname] || 'gastos';
   const [isFullscreen, setIsFullscreen]     = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [darkMode, setDarkMode]             = useState(() => localStorage.getItem('darkMode') === 'true');
@@ -151,6 +175,16 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
     } finally {
       setExportLoading(false);
     }
+  };
+
+  const handleExportPDF = () => {
+    const monthLabel_ = getCurrentMonthLabel();
+    exportToPDF(categories, profile, monthLabel_);
+  };
+
+  const handleCloneMonth = (clonedCategories) => {
+    setCategories(clonedCategories);
+    toast.success('Categorías del mes anterior copiadas ✅');
   };
 
   const handleImport = useCallback((items, sourceFilename) => {
@@ -349,17 +383,17 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
         <div className="max-w-5xl mx-auto px-4 mt-4">
           <div className="flex gap-2 border-b border-gray-200 dark:border-slate-700 mb-4 overflow-x-auto">
             {[
-              { id: "gastos",          label: "📋 Mis Gastos" },
-              { id: "graficos",        label: "📊 Gráficos" },
-              { id: "comparar",        label: "🗓️ Historial" },
-              { id: "importar",        label: "📂 Importar" },
-              { id: "exportar",        label: "⬇️ Exportar" },
-              { id: "recomendaciones", label: "💡 Tips" },
-              { id: "plan",            label: "🎯 Plan" },
+              { id: "gastos",          label: "📋 Mis Gastos", path: "/" },
+              { id: "graficos",        label: "📊 Gráficos", path: "/graficos" },
+              { id: "comparar",        label: "🗓️ Historial", path: "/historial" },
+              { id: "importar",        label: "📂 Importar", path: "/importar" },
+              { id: "exportar",        label: "⬇️ Exportar", path: "/exportar" },
+              { id: "recomendaciones", label: "💡 Tips", path: "/tips" },
+              { id: "plan",            label: "🎯 Plan", path: "/plan" },
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => navigate(tab.path)}
                 className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab.id
                     ? "border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-800"
@@ -371,144 +405,146 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
             ))}
           </div>
 
-          {/* ─── TAB: GASTOS ─── */}
-          {activeTab === "gastos" && (
-            <div>
-              <GastosTab
-                categories={categories}
-                setCategories={setCategories}
-                total={total}
-                TARGET={TARGET}
-              />
-              {/* Agregar categoría */}
-              <div className="mt-4 pb-8">
-                {showAddCat ? (
-                  <div className="flex items-center gap-2 p-3 bg-white dark:bg-slate-800 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-xl">
-                    <input
-                      autoFocus
-                      className="flex-1 text-sm border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      placeholder="Nombre de la categoría..."
-                      value={newCatName}
-                      onChange={e => setNewCatName(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === "Enter") handleAddCategory();
-                        if (e.key === "Escape") { setShowAddCat(false); setNewCatName(""); }
-                      }}
-                    />
-                    <button
-                      onClick={handleAddCategory}
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
-                    >Crear</button>
-                    <button
-                      onClick={() => { setShowAddCat(false); setNewCatName(""); }}
-                      className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 text-lg font-bold px-2"
-                    >×</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowAddCat(true)}
-                    className="w-full border-2 border-dashed border-gray-300 dark:border-slate-600 text-gray-400 dark:text-slate-500 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 rounded-xl py-3 text-sm font-medium transition"
-                  >
-                    ＋ Agregar categoría
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ─── TAB: GRÁFICOS ─── */}
-          {activeTab === "graficos" && (
-            <ChartPanel
-              categories={categories}
-              history={firestoreHistory ?? []}
-              target={TARGET}
-              salary={SALARY_ACTUAL}
-            />
-          )}
-
-          {/* ─── TAB: HISTORIAL / COMPARAR ─── */}
-          {activeTab === "comparar" && (
-            <CompareTab
-              categories={categories}
-              target={TARGET}
-              walletId={walletData?.id ?? null}
-              firestoreHistory={firestoreHistory}
-            />
-          )}
-
-          {/* ─── TAB: IMPORTAR ─── */}
-          {activeTab === "importar" && (
-            <ImportTab
-              categories={categories}
-              onImport={handleImport}
-            />
-          )}
-
-          {/* ─── TAB: EXPORTAR ─── */}
-          {activeTab === "exportar" && (
-            <div className="pb-8 space-y-4">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
-                <h3 className="font-bold text-gray-700 dark:text-slate-200 text-base mb-1">⬇️ Exportar gastos del mes</h3>
-                <p className="text-sm text-gray-400 dark:text-slate-500 mb-6">
-                  Descargá tus gastos de {getCurrentMonthLabel()} en el formato que prefieras.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button
-                    onClick={handleExportCSV}
-                    className="flex items-center gap-3 p-4 border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 rounded-xl hover:border-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition text-left"
-                  >
-                    <span className="text-3xl">📄</span>
-                    <div>
-                      <p className="font-bold text-green-700 dark:text-green-400 text-sm">Exportar CSV</p>
-                      <p className="text-xs text-green-600 dark:text-green-500">Compatible con Excel, Google Sheets</p>
+          {/* ─── Routes ─── */}
+          <Routes>
+            <Route path="/" element={
+              <div>
+                <GastosTab
+                  categories={categories}
+                  setCategories={setCategories}
+                  total={total}
+                  TARGET={TARGET}
+                />
+                {/* Agregar categoría */}
+                <div className="mt-4 pb-8">
+                  {showAddCat ? (
+                    <div className="flex items-center gap-2 p-3 bg-white dark:bg-slate-800 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-xl">
+                      <input
+                        autoFocus
+                        className="flex-1 text-sm border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        placeholder="Nombre de la categoría..."
+                        value={newCatName}
+                        onChange={e => setNewCatName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") handleAddCategory();
+                          if (e.key === "Escape") { setShowAddCat(false); setNewCatName(""); }
+                        }}
+                      />
+                      <button
+                        onClick={handleAddCategory}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition"
+                      >Crear</button>
+                      <button
+                        onClick={() => { setShowAddCat(false); setNewCatName(""); }}
+                        className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 text-lg font-bold px-2"
+                      >×</button>
                     </div>
-                  </button>
-                  <button
-                    onClick={handleExportExcel}
-                    disabled={exportLoading}
-                    className="flex items-center gap-3 p-4 border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 rounded-xl hover:border-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition text-left disabled:opacity-50"
-                  >
-                    <span className="text-3xl">📊</span>
-                    <div>
-                      <p className="font-bold text-blue-700 dark:text-blue-400 text-sm">
-                        {exportLoading ? "Generando..." : "Exportar Excel (.xlsx)"}
-                      </p>
-                      <p className="text-xs text-blue-600 dark:text-blue-500">Con formato, colores y totales</p>
-                    </div>
-                  </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowAddCat(true)}
+                      className="w-full border-2 border-dashed border-gray-300 dark:border-slate-600 text-gray-400 dark:text-slate-500 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-500 dark:hover:text-blue-400 rounded-xl py-3 text-sm font-medium transition"
+                    >
+                      ＋ Agregar categoría
+                    </button>
+                  )}
                 </div>
-                <div className="mt-4 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
-                  <p className="text-xs text-gray-500 dark:text-slate-400">
-                    📌 El archivo incluye: {categories.length} categorías,{" "}
-                    {categories.reduce((s, c) => s + c.items.length, 0)} ítems,{" "}
-                    total {fmt(total)}
+              </div>
+            } />
+            <Route path="/graficos" element={
+              <ChartPanel
+                categories={categories}
+                history={firestoreHistory ?? []}
+                target={TARGET}
+                salary={SALARY_ACTUAL}
+              />
+            } />
+            <Route path="/historial" element={
+              <CompareTab
+                categories={categories}
+                target={TARGET}
+                walletId={walletData?.id ?? null}
+                firestoreHistory={firestoreHistory}
+                onCloneMonth={handleCloneMonth}
+              />
+            } />
+            <Route path="/importar" element={
+              <ImportTab
+                categories={categories}
+                onImport={handleImport}
+              />
+            } />
+            <Route path="/exportar" element={
+              <div className="pb-8 space-y-4">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
+                  <h3 className="font-bold text-gray-700 dark:text-slate-200 text-base mb-1">⬇️ Exportar gastos del mes</h3>
+                  <p className="text-sm text-gray-400 dark:text-slate-500 mb-6">
+                    Descargá tus gastos de {getCurrentMonthLabel()} en el formato que prefieras.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                      onClick={handleExportCSV}
+                      className="flex items-center gap-3 p-4 border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 rounded-xl hover:border-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition text-left"
+                    >
+                      <span className="text-3xl">📄</span>
+                      <div>
+                        <p className="font-bold text-green-700 dark:text-green-400 text-sm">Exportar CSV</p>
+                        <p className="text-xs text-green-600 dark:text-green-500">Compatible con Excel, Google Sheets</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={handleExportExcel}
+                      disabled={exportLoading}
+                      className="flex items-center gap-3 p-4 border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 rounded-xl hover:border-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition text-left disabled:opacity-50"
+                    >
+                      <span className="text-3xl">📊</span>
+                      <div>
+                        <p className="font-bold text-blue-700 dark:text-blue-400 text-sm">
+                          {exportLoading ? "Generando..." : "Exportar Excel (.xlsx)"}
+                        </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-500">Con formato, colores y totales</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={handleExportPDF}
+                      className="flex items-center gap-3 p-4 border-2 border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/30 rounded-xl hover:border-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition text-left"
+                    >
+                      <span className="text-3xl">🖨️</span>
+                      <div>
+                        <p className="font-bold text-purple-700 dark:text-purple-400 text-sm">Exportar PDF / Imprimir</p>
+                        <p className="text-xs text-purple-600 dark:text-purple-500">Resumen visual listo para imprimir</p>
+                      </div>
+                    </button>
+                  </div>
+                  <div className="mt-4 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                      📌 El archivo incluye: {categories.length} categorías,{" "}
+                      {categories.reduce((s, c) => s + c.items.length, 0)} ítems,{" "}
+                      total {fmt(total)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            } />
+            <Route path="/tips" element={
+              <div className="pb-8 space-y-3">
+                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-4">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    Si aplicás <strong>todas las recomendaciones</strong>, el ahorro potencial es de{" "}
+                    <strong>{fmt(totalRec)}</strong>. Tus gastos bajarían a aproximadamente{" "}
+                    <strong className={postRecTotal <= TARGET ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
+                      {fmt(postRecTotal)}
+                    </strong>{" "}
+                    {postRecTotal <= TARGET ? "✅ — ¡dentro del objetivo!" : `— todavía ${fmt(postRecTotal - TARGET)} sobre el target`}.
                   </p>
                 </div>
+                <p className="text-center text-gray-500 dark:text-slate-400 py-8">No hay recomendaciones configuradas aún</p>
               </div>
-            </div>
-          )}
-
-          {/* ─── TAB: RECOMENDACIONES ─── */}
-          {activeTab === "recomendaciones" && (
-            <div className="pb-8 space-y-3">
-              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-4">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Si aplicás <strong>todas las recomendaciones</strong>, el ahorro potencial es de{" "}
-                  <strong>{fmt(totalRec)}</strong>. Tus gastos bajarían a aproximadamente{" "}
-                  <strong className={postRecTotal <= TARGET ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
-                    {fmt(postRecTotal)}
-                  </strong>{" "}
-                  {postRecTotal <= TARGET ? "✅ — ¡dentro del objetivo!" : `— todavía ${fmt(postRecTotal - TARGET)} sobre el target`}.
-                </p>
-              </div>
-              <p className="text-center text-gray-500 dark:text-slate-400 py-8">No hay recomendaciones configuradas aún</p>
-            </div>
-          )}
-
-          {/* ─── TAB: PLAN ─── */}
-          {activeTab === "plan" && (
-            <PlanTab total={total} TARGET={TARGET} />
-          )}
+            } />
+            <Route path="/plan" element={
+              <PlanTab total={total} TARGET={TARGET} />
+            } />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
 
         </div>
       </div>

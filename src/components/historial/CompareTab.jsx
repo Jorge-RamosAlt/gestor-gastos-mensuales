@@ -87,13 +87,15 @@ function TrendSVG({ months, target }) {
   );
 }
 
-function CompareTab({ categories, target, firestoreHistory }) {
+function CompareTab({ categories, target, firestoreHistory, onCloneMonth }) {
   const toast = useToast();
   const now       = new Date();
   const curYear   = now.getFullYear();
   const curMonth  = now.getMonth();
 
   const [localHistory, setLocalHistory] = useState(loadHistory);
+  const [showAutoSaveBanner, setShowAutoSaveBanner] = useState(false);
+  const [showCloneConfirm, setShowCloneConfirm] = useState(false);
 
   // Convertir entradas de Firestore al formato interno si están disponibles
   const firestoreConverted = useMemo(() => {
@@ -125,6 +127,18 @@ function CompareTab({ categories, target, firestoreHistory }) {
       return next;
     });
   }, [firestoreConverted]);
+
+  // Check for auto-save banner on mount
+  React.useEffect(() => {
+    if (firestoreConverted !== null) return; // Skip if using Firestore
+    const hist = loadHistory();
+    const prevMonth = curMonth === 0 ? 11 : curMonth - 1;
+    const prevYear = curMonth === 0 ? curYear - 1 : curYear;
+    const hasPrevMonth = hist.some(h => h.month === prevMonth && h.year === prevYear);
+    if (hist.length > 0 && !hasPrevMonth) {
+      setShowAutoSaveBanner(true);
+    }
+  }, [firestoreConverted, curMonth, curYear]);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [editId, setEditId]         = useState(null);
@@ -191,6 +205,37 @@ function CompareTab({ categories, target, firestoreHistory }) {
     };
     persistHistory([...history.filter(h => h.id !== id), entry]);
     toast.success('Mes guardado en el historial ✅');
+  };
+
+  const savePreviousMonth = () => {
+    const prevMonth = curMonth === 0 ? 11 : curMonth - 1;
+    const prevYear = curMonth === 0 ? curYear - 1 : curYear;
+    const id = `${prevMonth}_${prevYear}`;
+    const entry = {
+      id,
+      label:     monthLabel(prevMonth, prevYear),
+      year:      prevYear,
+      month:     prevMonth,
+      total:     currentTotal,
+      breakdown: Object.fromEntries(currentCats.map(c => [c.id, c.total])),
+    };
+    persistHistory([...history.filter(h => h.id !== id), entry]);
+    toast.success('Mes anterior guardado ✅');
+    setShowAutoSaveBanner(false);
+  };
+
+  const handleCloneConfirm = () => {
+    if (prevEntry) {
+      const clonedCategories = categories.map(cat => ({
+        ...cat,
+        items: [...(prevEntry.breakdown?.[cat.id] ? [{ id: `cloned_${Date.now()}`, name: "Base anterior", amount: prevEntry.breakdown[cat.id], locked: false }] : cat.items)],
+      }));
+      if (onCloneMonth) {
+        onCloneMonth(clonedCategories);
+      }
+      toast.success('Categorías del mes anterior copiadas ✅');
+    }
+    setShowCloneConfirm(false);
   };
 
   const openAddForm = (existingId = null) => {
@@ -279,6 +324,29 @@ function CompareTab({ categories, target, firestoreHistory }) {
   return (
     <div className="pb-10 space-y-4">
 
+      {/* ─ Auto-save banner ─ */}
+      {showAutoSaveBanner && (
+        <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-blue-800">
+            📅 El mes anterior ({monthLabel(curMonth === 0 ? 11 : curMonth - 1, curMonth === 0 ? curYear - 1 : curYear)}) no está guardado. ¿Guardarlo ahora?
+          </p>
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={savePreviousMonth}
+              className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+            >
+              Guardar mes anterior
+            </button>
+            <button
+              onClick={() => setShowAutoSaveBanner(false)}
+              className="text-xs font-medium border border-blue-300 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-lg transition"
+            >
+              Descartar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ─ Header ─ */}
       <div className="bg-gradient-to-r from-slate-700 to-slate-600 text-white rounded-xl p-5 flex items-start justify-between gap-4">
         <div>
@@ -297,6 +365,15 @@ function CompareTab({ categories, target, firestoreHistory }) {
           >
             💾 Guardar mes actual
           </button>
+          {prevEntry && (
+            <button
+              onClick={() => setShowCloneConfirm(true)}
+              title="Usar categorías del mes anterior como base"
+              className="text-xs font-medium bg-green-500/30 hover:bg-green-500/60 border border-green-400/40 text-green-200 hover:text-white px-3 py-2 rounded-lg transition"
+            >
+              📋 Usar mes anterior como base
+            </button>
+          )}
           <button
             onClick={() => openAddForm()}
             className="text-xs font-bold bg-teal-500 hover:bg-teal-400 px-3 py-2 rounded-lg transition"
@@ -305,6 +382,29 @@ function CompareTab({ categories, target, firestoreHistory }) {
           </button>
         </div>
       </div>
+
+      {/* ─ Clone confirmation ─ */}
+      {showCloneConfirm && (
+        <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-yellow-800">
+            ⚠️ Esto reemplazará las categorías actuales con las del mes anterior. ¿Continuar?
+          </p>
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={handleCloneConfirm}
+              className="text-xs font-bold bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition"
+            >
+              Confirmar
+            </button>
+            <button
+              onClick={() => setShowCloneConfirm(false)}
+              className="text-xs font-medium border border-yellow-300 text-yellow-700 hover:bg-yellow-100 px-4 py-2 rounded-lg transition"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ─ History pills ─ */}
       {history.length > 0 && (

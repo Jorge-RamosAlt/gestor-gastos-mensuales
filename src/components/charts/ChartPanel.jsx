@@ -71,6 +71,17 @@ export default function ChartPanel({ categories, history = [], target, salary })
     [categories]
   );
 
+  // ── Datos para bar chart (categorías vs presupuesto) ────────────────────────
+  const budgetData = useMemo(() => {
+    return categories
+      .filter(c => c.budget > 0)
+      .map(c => ({
+        name: c.name.replace(/^\S+\s/, "").slice(0, 14),
+        Gastado: c.items.reduce((s, i) => s + (Number(i.amount)||0), 0),
+        Presupuesto: c.budget,
+      }));
+  }, [categories]);
+
   return (
     <div className="pb-8 space-y-8">
 
@@ -203,6 +214,47 @@ export default function ChartPanel({ categories, history = [], target, salary })
               <Line type="monotone" dataKey="Gastos" stroke="#6366f1" strokeWidth={2} dot={{ r: 4, fill: "#6366f1" }} activeDot={{ r: 6 }} />
               <Line type="monotone" dataKey="Sueldo" stroke="#10b981" strokeWidth={2} dot={{ r: 4, fill: "#10b981" }} activeDot={{ r: 6 }} />
             </LineChart>
+          </ResponsiveContainer>
+        )}
+      </section>
+
+      {/* ── BAR — categorías vs presupuesto ── */}
+      <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+        <h3 className="font-bold text-gray-700 dark:text-slate-200 text-base mb-1">
+          💰 Categorías vs Presupuesto
+        </h3>
+        <p className="text-xs text-gray-400 dark:text-slate-500 mb-4">
+          Comparación de gastos reales contra presupuestos asignados
+        </p>
+        {budgetData.length === 0 ? (
+          <p className="text-center text-gray-400 dark:text-slate-500 py-10 text-sm">
+            Asigná presupuestos en Mis Gastos para ver esta sección
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={budgetData} layout="vertical" margin={{ top: 5, right: 10, left: 120, bottom: 5 }}>
+              <XAxis type="number" tickFormatter={fmtAxisShort} tick={{ fill: "#94a3b8", fontSize: 11 }} />
+              <YAxis type="category" dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+              <Tooltip
+                formatter={(value, name) => [fmt(value), name]}
+                contentStyle={{
+                  backgroundColor: "#1e293b",
+                  border: "1px solid #334155",
+                  borderRadius: "8px",
+                  color: "#e2e8f0",
+                  fontSize: 12,
+                }}
+              />
+              <Legend
+                iconType="circle"
+                iconSize={8}
+                formatter={(value) => (
+                  <span style={{ color: "#94a3b8", fontSize: 11 }}>{value}</span>
+                )}
+              />
+              <Bar dataKey="Gastado" fill="#ef4444" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="Presupuesto" fill="#10b981" radius={[0, 4, 4, 0]} opacity={0.6} />
+            </BarChart>
           </ResponsiveContainer>
         )}
       </section>

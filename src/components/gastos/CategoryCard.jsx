@@ -12,6 +12,8 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
   const [newItemAmount, setNewItemAmount] = useState("");
   const [showBudgetEdit, setShowBudgetEdit] = useState(false);
   const [budgetValue, setBudgetValue] = useState("");
+  const [showNotes, setShowNotes] = useState(false);
+  const [noteValue, setNoteValue] = useState(category.note || "");
 
   const catTotal = category.items.reduce((s, i) => s + i.amount, 0);
   const recurringCount = category.items.filter(i => i.recurring).length;
@@ -78,6 +80,11 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
     setShowAddForm(false);
   };
 
+  const saveNote = () => {
+    onUpdate({ ...category, note: noteValue });
+    setShowNotes(false);
+  };
+
   return (
     <div className={`rounded-xl border-2 overflow-hidden shadow-sm ${category.color}`}>
       <button
@@ -86,7 +93,12 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
       >
         <div className="flex items-center gap-2">
           <span className="text-lg">{category.icon}</span>
-          <span className={`font-semibold text-sm ${category.textColor}`}>{category.name}</span>
+          <div className="text-left">
+            <span className={`font-semibold text-sm ${category.textColor}`}>{category.name}</span>
+            {category.note && (
+              <p className="text-xs text-gray-500 truncate max-w-xs">{category.note.split('\n')[0]}</p>
+            )}
+          </div>
           {category.locked && <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded-full">FIJO</span>}
           {recurringCount > 0 && <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-semibold">🔁 {recurringCount}</span>}
         </div>
@@ -100,6 +112,14 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
             {overBudget && (
               <span className="text-xs font-bold text-red-600">🚨 +{fmt(overAmount)} sobre presupuesto</span>
             )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowNotes(!showNotes);
+              }}
+              title="Agregar nota"
+              className="text-amber-600 hover:text-amber-700 text-xs px-1 opacity-0 group-hover:opacity-100 transition"
+            >📝</button>
             {!category.locked && onDelete && (
               <button
                 onClick={(e) => {
@@ -113,7 +133,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                 className="text-red-400 hover:text-red-600 text-xs px-1 opacity-0 group-hover:opacity-100 transition"
               >🗑</button>
             )}
-            <span className="text-gray-500">{isOpen ? "▲" : "▼"}</span>
+            <span className="text-gray-500 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(0deg)' : 'rotate(180deg)' }}>▲</span>
           </div>
           {budget > 0 && (
             <div className="w-48 h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -129,7 +149,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
         </div>
       </button>
 
-      {isOpen && (
+      <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[3000px]' : 'max-h-0'}`}>
         <div className="divide-y divide-gray-200">
           {category.items.map((item) => (
             <div key={item.id} className="flex items-start justify-between px-4 py-2.5 hover:bg-white/50 transition group">
@@ -284,8 +304,40 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
               ➕ Agregar gasto
             </button>
           )}
+
+          {/* Notes section */}
+          {showNotes && (
+            <div className="px-4 py-3 bg-amber-50 border-t-2 border-amber-200">
+              <textarea
+                autoFocus
+                value={noteValue}
+                onChange={(e) => setNoteValue(e.target.value)}
+                onBlur={saveNote}
+                placeholder="Agregar nota sobre esta categoría..."
+                className="w-full border-2 border-amber-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none bg-white"
+                rows="3"
+              />
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={saveNote}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg transition text-sm"
+                >
+                  ✓ Guardar
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNotes(false);
+                    setNoteValue(category.note || "");
+                  }}
+                  className="border-2 border-gray-300 text-gray-600 font-bold px-3 py-1.5 rounded-lg hover:bg-gray-100 transition text-sm"
+                >
+                  ✕ Cancelar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
