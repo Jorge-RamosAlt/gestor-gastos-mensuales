@@ -21,10 +21,39 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
   const doneCount = category.items.filter(i => i.done).length;
   const budget = category.budget || 0;
 
-  // Fallbacks para categorías que no tengan colores definidos (ej: importadas o legacy)
-  const cardColor   = category.color       || "bg-gray-50 border-gray-300";
-  const headerColor = category.headerColor || "bg-gray-100";
-  const textColor   = category.textColor   || "text-gray-800";
+  // Mapa de clases Tailwind → valores CSS reales (evita que Tailwind purgue clases dinámicas)
+  const COLOR_MAP = {
+    violet:  { bg: '#f5f3ff', border: '#c4b5fd', header: '#ede9fe', text: '#5b21b6' },
+    cyan:    { bg: '#ecfeff', border: '#67e8f9', header: '#cffafe', text: '#155e75' },
+    orange:  { bg: '#fff7ed', border: '#fdba74', header: '#ffedd5', text: '#9a3412' },
+    pink:    { bg: '#fdf2f8', border: '#f9a8d4', header: '#fce7f3', text: '#9d174d' },
+    teal:    { bg: '#f0fdfa', border: '#5eead4', header: '#ccfbf1', text: '#115e59' },
+    blue:    { bg: '#eff6ff', border: '#93c5fd', header: '#dbeafe', text: '#1e40af' },
+    green:   { bg: '#f0fdf4', border: '#86efac', header: '#dcfce7', text: '#166534' },
+    yellow:  { bg: '#fefce8', border: '#fde047', header: '#fef9c3', text: '#854d0e' },
+    purple:  { bg: '#faf5ff', border: '#d8b4fe', header: '#f3e8ff', text: '#6b21a8' },
+    red:     { bg: '#fff1f2', border: '#fda4af', header: '#ffe4e6', text: '#9f1239' },
+    indigo:  { bg: '#eef2ff', border: '#a5b4fc', header: '#e0e7ff', text: '#3730a3' },
+    rose:    { bg: '#fff1f2', border: '#fda4af', header: '#ffe4e6', text: '#be123c' },
+    lime:    { bg: '#f7fee7', border: '#bef264', header: '#ecfccb', text: '#3f6212' },
+    emerald: { bg: '#ecfdf5', border: '#6ee7b7', header: '#d1fae5', text: '#065f46' },
+    sky:     { bg: '#f0f9ff', border: '#7dd3fc', header: '#e0f2fe', text: '#0c4a6e' },
+    amber:   { bg: '#fffbeb', border: '#fcd34d', header: '#fef3c7', text: '#92400e' },
+    gray:    { bg: '#f9fafb', border: '#d1d5db', header: '#f3f4f6', text: '#1f2937' },
+  };
+
+  // Detecta el color base del nombre de clase de Tailwind almacenado
+  const detectScheme = () => {
+    const stored = category.color || '';
+    for (const key of Object.keys(COLOR_MAP)) {
+      if (stored.includes(key)) return COLOR_MAP[key];
+    }
+    // Fallback determinístico por ID para que cada categoría tenga un color consistente
+    const keys = Object.keys(COLOR_MAP);
+    const idx = category.id ? category.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % keys.length : 0;
+    return COLOR_MAP[keys[idx]];
+  };
+  const scheme = detectScheme();
   const overBudget = budget > 0 && catTotal > budget;
   const overAmount = overBudget ? catTotal - budget : 0;
 
@@ -93,9 +122,10 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
   };
 
   return (
-    <div className={`rounded-xl border-2 overflow-hidden shadow-sm ${cardColor}`}>
+    <div className="rounded-xl border-2 overflow-hidden shadow-sm" style={{ backgroundColor: scheme.bg, borderColor: scheme.border }}>
       <button
-        className={`group w-full flex items-center justify-between px-4 py-3 ${headerColor} hover:brightness-95 transition`}
+        className="group w-full flex items-center justify-between px-4 py-3 hover:brightness-95 transition"
+        style={{ backgroundColor: scheme.header }}
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-label={isOpen ? "Colapsar categoría" : "Expandir categoría"}
@@ -103,7 +133,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
         <div className="flex items-center gap-2">
           <span className="text-lg">{category.icon}</span>
           <div className="text-left">
-            <span className={`font-semibold text-sm ${textColor}`}>{category.name}</span>
+            <span className="font-semibold text-sm" style={{ color: scheme.text }}>{category.name}</span>
             {category.note && (
               <p className="text-xs text-gray-500 truncate max-w-xs">{category.note.split('\n')[0]}</p>
             )}
