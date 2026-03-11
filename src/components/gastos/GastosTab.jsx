@@ -4,7 +4,7 @@ import CategoryCard from "./CategoryCard.jsx";
 import SearchBar from "./SearchBar.jsx";
 import EmptyState from "../ui/EmptyState.jsx";
 
-function GastosTab({ categories, setCategories, total, TARGET }) {
+function GastosTab({ categories, setCategories, total, TARGET, darkMode }) {
   const gap = total - TARGET;
   const [search, setSearch] = useState("");
   const [dragOverId, setDragOverId] = useState(null);
@@ -105,6 +105,7 @@ function GastosTab({ categories, setCategories, total, TARGET }) {
                 total={total}
                 onUpdate={handleCategoryUpdate}
                 onDelete={handleDeleteCategory}
+                darkMode={darkMode}
               />
             </div>
           </div>

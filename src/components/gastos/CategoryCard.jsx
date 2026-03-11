@@ -3,7 +3,7 @@ import { fmt, pct } from "../../lib/formatters.js";
 import { sanitizeName, sanitizeNote } from "../../lib/sanitize.js";
 import { useToast } from "../../hooks/useToast.js";
 
-function CategoryCard({ category, total, onUpdate, onDelete }) {
+function CategoryCard({ category, total, onUpdate, onDelete, darkMode }) {
   const toast = useToast();
   const [isOpen, setIsOpen] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -23,37 +23,59 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
 
   // Mapa de clases Tailwind → valores CSS reales (evita que Tailwind purgue clases dinámicas)
   const COLOR_MAP = {
-    violet:  { bg: '#f5f3ff', border: '#c4b5fd', header: '#ede9fe', text: '#5b21b6' },
-    cyan:    { bg: '#ecfeff', border: '#67e8f9', header: '#cffafe', text: '#155e75' },
-    orange:  { bg: '#fff7ed', border: '#fdba74', header: '#ffedd5', text: '#9a3412' },
-    pink:    { bg: '#fdf2f8', border: '#f9a8d4', header: '#fce7f3', text: '#9d174d' },
-    teal:    { bg: '#f0fdfa', border: '#5eead4', header: '#ccfbf1', text: '#115e59' },
-    blue:    { bg: '#eff6ff', border: '#93c5fd', header: '#dbeafe', text: '#1e40af' },
-    green:   { bg: '#f0fdf4', border: '#86efac', header: '#dcfce7', text: '#166534' },
-    yellow:  { bg: '#fefce8', border: '#fde047', header: '#fef9c3', text: '#854d0e' },
-    purple:  { bg: '#faf5ff', border: '#d8b4fe', header: '#f3e8ff', text: '#6b21a8' },
-    red:     { bg: '#fff1f2', border: '#fda4af', header: '#ffe4e6', text: '#9f1239' },
-    indigo:  { bg: '#eef2ff', border: '#a5b4fc', header: '#e0e7ff', text: '#3730a3' },
-    rose:    { bg: '#fff1f2', border: '#fda4af', header: '#ffe4e6', text: '#be123c' },
-    lime:    { bg: '#f7fee7', border: '#bef264', header: '#ecfccb', text: '#3f6212' },
-    emerald: { bg: '#ecfdf5', border: '#6ee7b7', header: '#d1fae5', text: '#065f46' },
-    sky:     { bg: '#f0f9ff', border: '#7dd3fc', header: '#e0f2fe', text: '#0c4a6e' },
-    amber:   { bg: '#fffbeb', border: '#fcd34d', header: '#fef3c7', text: '#92400e' },
-    gray:    { bg: '#f9fafb', border: '#d1d5db', header: '#f3f4f6', text: '#1f2937' },
+    violet:  { bg: '#f5f3ff', border: '#c4b5fd', header: '#ede9fe', text: '#5b21b6', itemHover: 'rgba(237,233,254,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    cyan:    { bg: '#ecfeff', border: '#67e8f9', header: '#cffafe', text: '#155e75', itemHover: 'rgba(207,250,254,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    orange:  { bg: '#fff7ed', border: '#fdba74', header: '#ffedd5', text: '#9a3412', itemHover: 'rgba(255,237,213,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    pink:    { bg: '#fdf2f8', border: '#f9a8d4', header: '#fce7f3', text: '#9d174d', itemHover: 'rgba(252,231,243,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    teal:    { bg: '#f0fdfa', border: '#5eead4', header: '#ccfbf1', text: '#115e59', itemHover: 'rgba(204,251,241,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    blue:    { bg: '#eff6ff', border: '#93c5fd', header: '#dbeafe', text: '#1e40af', itemHover: 'rgba(219,234,254,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    green:   { bg: '#f0fdf4', border: '#86efac', header: '#dcfce7', text: '#166534', itemHover: 'rgba(220,252,231,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    yellow:  { bg: '#fefce8', border: '#fde047', header: '#fef9c3', text: '#854d0e', itemHover: 'rgba(254,249,195,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    purple:  { bg: '#faf5ff', border: '#d8b4fe', header: '#f3e8ff', text: '#6b21a8', itemHover: 'rgba(243,232,255,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    red:     { bg: '#fff1f2', border: '#fda4af', header: '#ffe4e6', text: '#9f1239', itemHover: 'rgba(255,228,230,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    indigo:  { bg: '#eef2ff', border: '#a5b4fc', header: '#e0e7ff', text: '#3730a3', itemHover: 'rgba(224,231,255,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    rose:    { bg: '#fff1f2', border: '#fda4af', header: '#ffe4e6', text: '#be123c', itemHover: 'rgba(255,228,230,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    lime:    { bg: '#f7fee7', border: '#bef264', header: '#ecfccb', text: '#3f6212', itemHover: 'rgba(236,252,203,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    emerald: { bg: '#ecfdf5', border: '#6ee7b7', header: '#d1fae5', text: '#065f46', itemHover: 'rgba(209,250,229,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    sky:     { bg: '#f0f9ff', border: '#7dd3fc', header: '#e0f2fe', text: '#0c4a6e', itemHover: 'rgba(224,242,254,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    amber:   { bg: '#fffbeb', border: '#fcd34d', header: '#fef3c7', text: '#92400e', itemHover: 'rgba(254,243,199,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+    gray:    { bg: '#f9fafb', border: '#d1d5db', header: '#f3f4f6', text: '#1f2937', itemHover: 'rgba(243,244,246,0.5)', itemText: '#374151', divider: '#e5e7eb' },
+  };
+
+  // Variantes oscuras para modo oscuro
+  const COLOR_MAP_DARK = {
+    violet:  { bg: '#1e1b3a', border: '#7c3aed', header: '#2d2a50', text: '#c4b5fd', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#3b3855' },
+    cyan:    { bg: '#0c2830', border: '#06b6d4', header: '#163840', text: '#67e8f9', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#1e3840' },
+    orange:  { bg: '#2a1a0e', border: '#f97316', header: '#3a2818', text: '#fdba74', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#3a2818' },
+    pink:    { bg: '#2a1020', border: '#ec4899', header: '#3a2030', text: '#f9a8d4', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#3a2030' },
+    teal:    { bg: '#0a2824', border: '#14b8a6', header: '#183830', text: '#5eead4', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#1e3830' },
+    blue:    { bg: '#0f1d38', border: '#3b82f6', header: '#1a2d48', text: '#93c5fd', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#1f2d48' },
+    green:   { bg: '#0e2818', border: '#22c55e', header: '#1a3828', text: '#86efac', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#1a3828' },
+    yellow:  { bg: '#28220a', border: '#eab308', header: '#38320a', text: '#fde047', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#38321a' },
+    purple:  { bg: '#1e1030', border: '#a855f7', header: '#2e2040', text: '#d8b4fe', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#2e2040' },
+    red:     { bg: '#2a0e14', border: '#ef4444', header: '#3a1e24', text: '#fca5a5', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#3a1e24' },
+    indigo:  { bg: '#111830', border: '#6366f1', header: '#1e2840', text: '#a5b4fc', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#1e2840' },
+    rose:    { bg: '#2a0f18', border: '#f43f5e', header: '#3a1f28', text: '#fda4af', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#3a1f28' },
+    lime:    { bg: '#162208', border: '#84cc16', header: '#243218', text: '#bef264', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#243218' },
+    emerald: { bg: '#0a2a1e', border: '#10b981', header: '#183a2e', text: '#6ee7b7', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#183a2e' },
+    sky:     { bg: '#0c1e2a', border: '#0ea5e9', header: '#1a2e3a', text: '#7dd3fc', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#1a2e3a' },
+    amber:   { bg: '#281e08', border: '#f59e0b', header: '#382e18', text: '#fcd34d', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#382e18' },
+    gray:    { bg: '#1e2228', border: '#6b7280', header: '#2e3238', text: '#d1d5db', itemHover: 'rgba(255,255,255,0.05)', itemText: '#e2e8f0', divider: '#2e3238' },
   };
 
   // Detecta el color base del nombre de clase de Tailwind almacenado
-  const detectScheme = () => {
+  const detectScheme = (isDark) => {
+    const map = isDark ? COLOR_MAP_DARK : COLOR_MAP;
     const stored = category.color || '';
-    for (const key of Object.keys(COLOR_MAP)) {
-      if (stored.includes(key)) return COLOR_MAP[key];
+    for (const key of Object.keys(map)) {
+      if (stored.includes(key)) return map[key];
     }
     // Fallback determinístico por ID para que cada categoría tenga un color consistente
-    const keys = Object.keys(COLOR_MAP);
+    const keys = Object.keys(map);
     const idx = category.id ? category.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % keys.length : 0;
-    return COLOR_MAP[keys[idx]];
+    return map[keys[idx]];
   };
-  const scheme = detectScheme();
+  const scheme = detectScheme(darkMode);
   const overBudget = budget > 0 && catTotal > budget;
   const overAmount = overBudget ? catTotal - budget : 0;
 
@@ -196,9 +218,12 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
       </button>
 
       <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[3000px]' : 'max-h-0'}`}>
-        <div className="divide-y divide-gray-200">
+        <div style={{ borderColor: scheme.divider }} className="divide-y">
           {category.items.map((item) => (
-            <div key={item.id} className={`flex items-start gap-2 justify-between px-4 py-2.5 hover:bg-white/50 transition group ${item.done ? 'opacity-60' : ''}`}>
+            <div key={item.id} className={`flex items-start gap-2 justify-between px-4 py-2.5 transition group ${item.done ? 'opacity-60' : ''}`} style={{ '--hover-bg': scheme.itemHover }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = scheme.itemHover; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = ''; }}
+            >
               <input
                 type="checkbox"
                 checked={!!item.done}
@@ -216,7 +241,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                 <div className="flex items-center gap-1">
                   {item.locked && <span className="text-gray-400 text-xs">🔒</span>}
                   {item.alert && !item.locked && <span className="text-xs">⚠️</span>}
-                  <span className={`text-sm text-gray-700 ${item.done ? 'line-through text-gray-400' : ''}`}>{item.name}</span>
+                  <span className={`text-sm ${item.done ? 'line-through' : ''}`} style={{ color: item.done ? (darkMode ? '#94a3b8' : '#9ca3af') : scheme.itemText }}>{item.name}</span>
                   {item.done && <span className="text-xs text-green-600 font-semibold bg-green-50 px-1.5 py-0.5 rounded-full">✓ Listo</span>}
                   {item.recurring && <span className="text-teal-600 text-xs font-semibold">🔁</span>}
                 </div>

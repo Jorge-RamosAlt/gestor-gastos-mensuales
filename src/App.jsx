@@ -475,6 +475,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
                   setCategories={setCategories}
                   total={total}
                   TARGET={TARGET}
+                  darkMode={darkMode}
                 />
                 {/* Agregar categoría */}
                 <div className="mt-4 pb-8">
