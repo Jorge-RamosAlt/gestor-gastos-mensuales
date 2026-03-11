@@ -8,7 +8,7 @@ export function sanitizeText(str, maxLen = 200) {
   if (typeof str !== 'string') return '';
   return str
     .replace(/<[^>]*>/g, '')           // strip HTML tags
-    .replace(/[\x00-\x1F\x7F]/g, '')  // strip control characters
+    .replace(/\p{Cc}/gu, '')           // strip control characters (unicode category Cc)
     .trim()
     .slice(0, maxLen);
 }
