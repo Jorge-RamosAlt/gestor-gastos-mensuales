@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { fmt } from "../../lib/formatters.js";
 import CategoryCard from "./CategoryCard.jsx";
 import SearchBar from "./SearchBar.jsx";
@@ -23,22 +23,19 @@ function GastosTab({ categories, setCategories, total, TARGET }) {
     return catTotal > cat.budget;
   });
 
-  const filteredCategories = useMemo(() => {
-    if (!search.trim()) return categories;
-    const searchLower = search.toLowerCase();
-    return categories.filter(cat =>
-      cat.items.some(item => item.name.toLowerCase().includes(searchLower))
-    );
-  }, [categories, search]);
+  const searchLower = search.toLowerCase();
+  const filteredCategories = search.trim()
+    ? categories.filter(cat =>
+        cat.items.some(item => item.name.toLowerCase().includes(searchLower))
+      )
+    : categories;
 
-  const matchingCount = useMemo(() => {
-    if (!search.trim()) return 0;
-    const searchLower = search.toLowerCase();
-    return categories.reduce((count, cat) =>
-      count + cat.items.filter(item => item.name.toLowerCase().includes(searchLower)).length,
-      0
-    );
-  }, [categories, search]);
+  const matchingCount = search.trim()
+    ? categories.reduce((count, cat) =>
+        count + cat.items.filter(item => item.name.toLowerCase().includes(searchLower)).length,
+        0
+      )
+    : 0;
 
   return (
     <div className="space-y-3 pb-8">
