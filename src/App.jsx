@@ -354,7 +354,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
                 </button>
                 <button
                   onClick={() => setShowTemplates(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-purple-700 dark:text-purple-300 text-sm font-medium rounded-xl transition"
+                  className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium px-3 py-2 rounded-lg transition border border-white/20"
                   title="Plantillas de mes"
                 >
                   📋 Templates
