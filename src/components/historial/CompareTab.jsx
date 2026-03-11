@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { fmt, pct, fmtShort, fmtDelta, monthLabel, MESES, catFromEntry } from "../../lib/formatters.js";
+import { sanitizeName } from "../../lib/sanitize.js";
 import { useToast } from "../../hooks/useToast.js";
 
 function loadHistory() {
@@ -287,7 +288,7 @@ function CompareTab({ categories, target, firestoreHistory, onCloneMonth }) {
     const id = `${formMonth}_${formYear}`;
     const entry = {
       id,
-      label:     monthLabel(formMonth, formYear),
+      label:     sanitizeName(monthLabel(formMonth, formYear)),
       year:      formYear,
       month:     formMonth,
       total,

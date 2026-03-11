@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { fmt } from "../../lib/formatters.js";
 import CategoryCard from "./CategoryCard.jsx";
 import SearchBar from "./SearchBar.jsx";
+import EmptyState from "../ui/EmptyState.jsx";
 
 function GastosTab({ categories, setCategories, total, TARGET }) {
   const gap = total - TARGET;
@@ -56,6 +57,20 @@ function GastosTab({ categories, setCategories, total, TARGET }) {
         </p>
       )}
 
+      {filteredCategories.length === 0 && !search && (
+        <EmptyState
+          icon="💸"
+          title="Sin categorías todavía"
+          subtitle="Agregá tu primera categoría para empezar a registrar tus gastos del mes."
+        />
+      )}
+      {filteredCategories.length === 0 && search && (
+        <EmptyState
+          icon="🔍"
+          title="Sin resultados"
+          subtitle={`No se encontraron gastos que coincidan con "${search}".`}
+        />
+      )}
       {filteredCategories.map((cat) => (
         <CategoryCard
           key={cat.id}

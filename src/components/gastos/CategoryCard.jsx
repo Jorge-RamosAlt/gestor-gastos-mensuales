@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { fmt, pct } from "../../lib/formatters.js";
+import { sanitizeName, sanitizeNote } from "../../lib/sanitize.js";
 import { useToast } from "../../hooks/useToast.js";
 
 function CategoryCard({ category, total, onUpdate, onDelete }) {
@@ -68,7 +69,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
     const parsed = parseInt(newItemAmount.replace(/\D/g, ""), 10) || 0;
     const newItem = {
       id: `item_${Date.now()}`,
-      name: newItemName.trim(),
+      name: sanitizeName(newItemName.trim()),
       amount: parsed,
       locked: false,
     };
@@ -81,7 +82,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
   };
 
   const saveNote = () => {
-    onUpdate({ ...category, note: noteValue });
+    onUpdate({ ...category, note: sanitizeNote(noteValue) });
     setShowNotes(false);
   };
 

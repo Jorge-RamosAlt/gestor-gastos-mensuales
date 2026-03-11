@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { useNavigate, useLocation, Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
 import { auth } from "./lib/firebase.js";
@@ -22,11 +22,13 @@ import ResetModal from "./components/gastos/ResetModal.jsx";
 import ShareModal from "./components/gastos/ShareModal.jsx";
 import WalletBar from "./components/wallet/WalletBar.jsx";
 import GastosTab from "./components/gastos/GastosTab.jsx";
-import CompareTab from "./components/historial/CompareTab.jsx";
-import ImportTab from "./components/importar/ImportTab.jsx";
-import PlanTab from "./components/gastos/PlanTab.jsx";
-import ChartPanel from "./components/charts/ChartPanel.jsx";
+import { AppLoadingSkeleton } from "./components/ui/Skeleton.jsx";
 import { exportToCSV, exportToExcel } from "./lib/exportUtils.js";
+
+const CompareTab = lazy(() => import("./components/historial/CompareTab.jsx"));
+const ImportTab  = lazy(() => import("./components/importar/ImportTab.jsx"));
+const ChartPanel = lazy(() => import("./components/charts/ChartPanel.jsx"));
+const PlanTab    = lazy(() => import("./components/gastos/PlanTab.jsx"));
 
 import { fmt, pct, getCurrentMonthLabel } from "./lib/formatters.js";
 import { exportToPDF } from "./lib/exportPDF.js";
@@ -50,6 +52,17 @@ function saveHistory(entries) {
 
 const INITIAL_CATEGORIES = [];
 const RECOMMENDATIONS = [];
+
+function TabFallback() {
+  return (
+    <div className="flex items-center justify-center py-20 text-gray-400 dark:text-slate-500">
+      <div className="text-center space-y-2">
+        <div className="animate-spin text-3xl">⚙️</div>
+        <p className="text-sm">Cargando...</p>
+      </div>
+    </div>
+  );
+}
 
 function IconExpand() {
   return (
@@ -380,7 +393,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
         </div>
 
         {/* ─── TABS ─── */}
-        <div className="max-w-5xl mx-auto px-4 mt-4">
+        <div className="max-w-5xl mx-auto px-4 mt-4 pb-20 md:pb-0">
           <div className="flex gap-2 border-b border-gray-200 dark:border-slate-700 mb-4 overflow-x-auto">
             {[
               { id: "gastos",          label: "📋 Mis Gastos", path: "/" },
@@ -406,8 +419,9 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
           </div>
 
           {/* ─── Routes ─── */}
-          <Routes>
-            <Route path="/" element={
+          <Suspense fallback={<TabFallback />}>
+            <Routes>
+              <Route path="/" element={
               <div>
                 <GastosTab
                   categories={categories}
@@ -543,10 +557,39 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
             <Route path="/plan" element={
               <PlanTab total={total} TARGET={TARGET} />
             } />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
 
         </div>
+
+        {/* Mobile bottom navigation */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex safe-area-inset-bottom">
+          {[
+            { path: '/', icon: '💸', label: 'Gastos' },
+            { path: '/graficos', icon: '📊', label: 'Gráficos' },
+            { path: '/historial', icon: '📅', label: 'Historial' },
+            { path: '/plan', icon: '🎯', label: 'Plan' },
+          ].map(tab => {
+            const isActive = tab.path === '/'
+              ? location.pathname === '/'
+              : location.pathname.startsWith(tab.path);
+            return (
+              <button
+                key={tab.path}
+                onClick={() => navigate(tab.path)}
+                className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs font-medium transition-colors ${
+                  isActive
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+                }`}
+              >
+                <span className="text-xl leading-none">{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );
@@ -830,11 +873,8 @@ function App() {
 
   if (authUser === undefined) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-3">📊</div>
-          <div className="w-8 h-8 border-2 border-slate-600 border-t-blue-400 rounded-full animate-spin mx-auto" />
-        </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+        <AppLoadingSkeleton />
       </div>
     );
   }
