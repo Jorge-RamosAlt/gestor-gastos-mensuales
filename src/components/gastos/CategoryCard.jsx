@@ -20,6 +20,11 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
   const recurringCount = category.items.filter(i => i.recurring).length;
   const doneCount = category.items.filter(i => i.done).length;
   const budget = category.budget || 0;
+
+  // Fallbacks para categorías que no tengan colores definidos (ej: importadas o legacy)
+  const cardColor   = category.color       || "bg-gray-50 border-gray-300";
+  const headerColor = category.headerColor || "bg-gray-100";
+  const textColor   = category.textColor   || "text-gray-800";
   const overBudget = budget > 0 && catTotal > budget;
   const overAmount = overBudget ? catTotal - budget : 0;
 
@@ -88,9 +93,9 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
   };
 
   return (
-    <div className={`rounded-xl border-2 overflow-hidden shadow-sm ${category.color}`}>
+    <div className={`rounded-xl border-2 overflow-hidden shadow-sm ${cardColor}`}>
       <button
-        className={`group w-full flex items-center justify-between px-4 py-3 ${category.headerColor} hover:brightness-95 transition`}
+        className={`group w-full flex items-center justify-between px-4 py-3 ${headerColor} hover:brightness-95 transition`}
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-label={isOpen ? "Colapsar categoría" : "Expandir categoría"}
@@ -98,7 +103,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
         <div className="flex items-center gap-2">
           <span className="text-lg">{category.icon}</span>
           <div className="text-left">
-            <span className={`font-semibold text-sm ${category.textColor}`}>{category.name}</span>
+            <span className={`font-semibold text-sm ${textColor}`}>{category.name}</span>
             {category.note && (
               <p className="text-xs text-gray-500 truncate max-w-xs">{category.note.split('\n')[0]}</p>
             )}
