@@ -18,6 +18,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
 
   const catTotal = category.items.reduce((s, i) => s + i.amount, 0);
   const recurringCount = category.items.filter(i => i.recurring).length;
+  const doneCount = category.items.filter(i => i.done).length;
   const budget = category.budget || 0;
   const overBudget = budget > 0 && catTotal > budget;
   const overAmount = overBudget ? catTotal - budget : 0;
@@ -102,6 +103,11 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
           </div>
           {category.locked && <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded-full">FIJO</span>}
           {recurringCount > 0 && <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-semibold">🔁 {recurringCount}</span>}
+          {doneCount > 0 && (
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
+              ✓ {doneCount} listo{doneCount !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           <div className="flex items-center gap-2">
@@ -153,22 +159,31 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
       <div className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[3000px]' : 'max-h-0'}`}>
         <div className="divide-y divide-gray-200">
           {category.items.map((item) => (
-            <div key={item.id} className="flex items-start justify-between px-4 py-2.5 hover:bg-white/50 transition group">
+            <div key={item.id} className={`flex items-start gap-2 justify-between px-4 py-2.5 hover:bg-white/50 transition group ${item.done ? 'opacity-60' : ''}`}>
+              <input
+                type="checkbox"
+                checked={!!item.done}
+                onChange={() => {
+                  const updatedItems = category.items.map(i =>
+                    i.id === item.id ? { ...i, done: !i.done } : i
+                  );
+                  onUpdate({ ...category, items: updatedItems });
+                }}
+                className="mt-0.5 w-4 h-4 rounded accent-green-500 cursor-pointer flex-shrink-0"
+                title={item.done ? "Marcar como pendiente" : "Marcar como listo (no se copiará al mes siguiente)"}
+              />
               <div className="flex-1 min-w-0 pr-4">
                 <div className="flex items-center gap-1">
                   {item.locked && <span className="text-gray-400 text-xs">🔒</span>}
                   {item.alert && !item.locked && <span className="text-xs">⚠️</span>}
-                  <span className="text-sm text-gray-700">{item.name}</span>
+                  <span className={`text-sm text-gray-700 ${item.done ? 'line-through text-gray-400' : ''}`}>{item.name}</span>
+                  {item.done && <span className="text-xs text-green-600 font-semibold bg-green-50 px-1.5 py-0.5 rounded-full">✓ Listo</span>}
                   {item.recurring && <span className="text-teal-600 text-xs font-semibold">🔁</span>}
                 </div>
                 {item.note && <p className="text-xs text-gray-400 mt-0.5">{item.note}</p>}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {item.locked ? (
-                  <span className="text-sm font-semibold text-gray-600 bg-gray-200 px-3 py-1 rounded-lg">
-                    {fmt(item.amount)}
-                  </span>
-                ) : editingId === item.id ? (
+                {editingId === item.id ? (
                   <div className="flex items-center gap-1">
                     <input
                       autoFocus
@@ -188,7 +203,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                     <button
                       className="text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg transition cursor-pointer border border-blue-200"
                       onClick={() => startEdit(item.id, item.amount)}
-                      title="Clic para editar"
+                      title="Clic para editar monto"
                     >
                       {fmt(item.amount)}
                     </button>
@@ -196,18 +211,18 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                       <button
                         onClick={() => toggleRecurring(item.id)}
                         className="text-gray-400 hover:text-teal-600 transition opacity-0 group-hover:opacity-100"
-                        title="Gasto recurrente — se mantiene cada mes"
+                        title="Gasto recurrente"
+                      >🔁</button>
+                    )}
+                    {!item.locked && (
+                      <button
+                        onClick={() => deleteItem(item.id)}
+                        className="text-gray-400 hover:text-red-500 transition text-lg leading-none opacity-0 group-hover:opacity-100"
+                        title="Eliminar"
                       >
-                        🔁
+                        ×
                       </button>
                     )}
-                    <button
-                      onClick={() => deleteItem(item.id)}
-                      className="text-gray-400 hover:text-red-500 transition text-lg leading-none opacity-0 group-hover:opacity-100"
-                      title="Eliminar"
-                    >
-                      ×
-                    </button>
                   </>
                 )}
               </div>

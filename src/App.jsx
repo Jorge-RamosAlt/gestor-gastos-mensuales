@@ -196,8 +196,21 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
   };
 
   const handleCloneMonth = (clonedCategories) => {
-    setCategories(clonedCategories);
-    toast.success('Categorías del mes anterior copiadas ✅');
+    const cleaned = clonedCategories.map(cat => ({
+      ...cat,
+      items: cat.items
+        .filter(item => !item.done)           // exclude items marked as done
+        .map(item => ({ ...item, done: false })) // reset done flag on carried items
+    }));
+    setCategories(cleaned);
+    const removedCount = clonedCategories.reduce(
+      (acc, cat) => acc + cat.items.filter(i => i.done).length, 0
+    );
+    if (removedCount > 0) {
+      toast.success(`✅ Mes copiado — ${removedCount} gasto${removedCount !== 1 ? 's' : ''} resuelto${removedCount !== 1 ? 's' : ''} no copiado${removedCount !== 1 ? 's' : ''}`);
+    } else {
+      toast.success('Categorías del mes anterior copiadas ✅');
+    }
   };
 
   const handleImport = useCallback((items, sourceFilename) => {
