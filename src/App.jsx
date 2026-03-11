@@ -29,6 +29,7 @@ const CompareTab = lazy(() => import("./components/historial/CompareTab.jsx"));
 const ImportTab  = lazy(() => import("./components/importar/ImportTab.jsx"));
 const ChartPanel = lazy(() => import("./components/charts/ChartPanel.jsx"));
 const PlanTab    = lazy(() => import("./components/gastos/PlanTab.jsx"));
+const TemplateModal = lazy(() => import("./components/gastos/TemplateModal.jsx"));
 
 import { fmt, pct, getCurrentMonthLabel } from "./lib/formatters.js";
 import { exportToPDF } from "./lib/exportPDF.js";
@@ -129,6 +130,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
   const [exportLoading, setExportLoading]   = useState(false);
   const [showAddCat, setShowAddCat]         = useState(false);
   const [newCatName, setNewCatName]         = useState("");
+  const [showTemplates, setShowTemplates]   = useState(false);
 
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode);
@@ -281,6 +283,19 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
           />
         )}
 
+        {showTemplates && (
+          <Suspense fallback={null}>
+            <TemplateModal
+              categories={categories}
+              onApply={(structure) => {
+                setCategories(structure);
+                setShowTemplates(false);
+              }}
+              onClose={() => setShowTemplates(false)}
+            />
+          </Suspense>
+        )}
+
 
         {/* ─── HEADER ─── */}
         <div className="bg-gradient-to-r from-slate-800 to-slate-700 dark:from-slate-900 dark:to-slate-800 text-white px-4 sm:px-6 py-5 shadow-lg">
@@ -326,6 +341,13 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
                   className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium px-3 py-2 rounded-lg transition border border-white/20 hidden sm:flex"
                 >
                   {isFullscreen ? <><IconCompress /> Salir</> : <><IconExpand /> Pantalla</>}
+                </button>
+                <button
+                  onClick={() => setShowTemplates(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 hover:bg-purple-200 dark:bg-purple-900 dark:hover:bg-purple-800 text-purple-700 dark:text-purple-300 text-sm font-medium rounded-xl transition"
+                  title="Plantillas de mes"
+                >
+                  📋 Templates
                 </button>
               </div>
             </div>
@@ -407,7 +429,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
 
         {/* ─── TABS ─── */}
         <div className="max-w-5xl mx-auto px-4 mt-4 pb-20 md:pb-0">
-          <div className="flex gap-2 border-b border-gray-200 dark:border-slate-700 mb-4 overflow-x-auto">
+          <div className="flex gap-2 border-b border-gray-200 dark:border-slate-700 mb-4 overflow-x-auto" role="tablist">
             {[
               { id: "gastos",          label: "📋 Mis Gastos", path: "/" },
               { id: "graficos",        label: "📊 Gráficos", path: "/graficos" },
@@ -420,6 +442,8 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
               <button
                 key={tab.id}
                 onClick={() => navigate(tab.path)}
+                role="tab"
+                aria-selected={activeTab === tab.id}
                 className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab.id
                     ? "border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-800"
@@ -577,7 +601,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
         </div>
 
         {/* Mobile bottom navigation */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex safe-area-inset-bottom">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 flex safe-area-inset-bottom" role="navigation" aria-label="Navegación principal">
           {[
             { path: '/', icon: '💸', label: 'Gastos' },
             { path: '/graficos', icon: '📊', label: 'Gráficos' },

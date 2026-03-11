@@ -7,6 +7,8 @@ import EmptyState from "../ui/EmptyState.jsx";
 function GastosTab({ categories, setCategories, total, TARGET }) {
   const gap = total - TARGET;
   const [search, setSearch] = useState("");
+  const [dragOverId, setDragOverId] = useState(null);
+  const draggedId = React.useRef(null);
 
   const handleCategoryUpdate = (updatedCat) => {
     setCategories(prev =>
@@ -72,13 +74,41 @@ function GastosTab({ categories, setCategories, total, TARGET }) {
         />
       )}
       {filteredCategories.map((cat) => (
-        <CategoryCard
+        <div
           key={cat.id}
-          category={cat}
-          total={total}
-          onUpdate={handleCategoryUpdate}
-          onDelete={handleDeleteCategory}
-        />
+          draggable
+          onDragStart={() => { draggedId.current = cat.id; }}
+          onDragOver={(e) => { e.preventDefault(); setDragOverId(cat.id); }}
+          onDragLeave={() => setDragOverId(null)}
+          onDrop={() => {
+            if (!draggedId.current || draggedId.current === cat.id) {
+              setDragOverId(null);
+              return;
+            }
+            const from = categories.findIndex(c => c.id === draggedId.current);
+            const to   = categories.findIndex(c => c.id === cat.id);
+            if (from === -1 || to === -1) { setDragOverId(null); return; }
+            const reordered = [...categories];
+            const [moved] = reordered.splice(from, 1);
+            reordered.splice(to, 0, moved);
+            setCategories(reordered);
+            draggedId.current = null;
+            setDragOverId(null);
+          }}
+          className={`transition-all duration-150 ${dragOverId === cat.id ? 'ring-2 ring-blue-400 ring-offset-1 rounded-xl scale-[1.01]' : ''}`}
+        >
+          <div className="flex items-center gap-1">
+            <span className="text-gray-300 text-lg cursor-grab select-none px-1 opacity-0 hover:opacity-100 transition" title="Arrastrar para reordenar">⠿</span>
+            <div className="flex-1">
+              <CategoryCard
+                category={cat}
+                total={total}
+                onUpdate={handleCategoryUpdate}
+                onDelete={handleDeleteCategory}
+              />
+            </div>
+          </div>
+        </div>
       ))}
 
       {/* Resumen total */}

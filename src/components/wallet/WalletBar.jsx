@@ -14,7 +14,7 @@ function WalletBar({ walletData, authUser, onLeave, onChangeWallet }) {
   };
 
   return (
-    <div className="flex items-center gap-3 bg-white/8 border border-white/15 rounded-xl px-4 py-2.5 mb-4 flex-wrap">
+    <div className="flex items-center gap-3 bg-white/8 border border-white/15 rounded-xl px-4 py-2.5 mb-4 flex-wrap" role="navigation" aria-label="Cartera activa">
       {/* Nombre + código */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <span className="text-base">💼</span>

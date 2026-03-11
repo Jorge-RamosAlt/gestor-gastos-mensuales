@@ -92,6 +92,8 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
       <button
         className={`group w-full flex items-center justify-between px-4 py-3 ${category.headerColor} hover:brightness-95 transition`}
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-label={isOpen ? "Colapsar categoría" : "Expandir categoría"}
       >
         <div className="flex items-center gap-2">
           <span className="text-lg">{category.icon}</span>
@@ -125,6 +127,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                 setShowNotes(!showNotes);
               }}
               title="Agregar nota"
+              aria-label="Agregar nota"
               className="text-amber-600 hover:text-amber-700 text-xs px-1 opacity-0 group-hover:opacity-100 transition"
             >📝</button>
             {!category.locked && onDelete && (
@@ -137,6 +140,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                   }
                 }}
                 title="Eliminar categoría"
+                aria-label={`Eliminar categoría ${category.name}`}
                 className="text-red-400 hover:text-red-600 text-xs px-1 opacity-0 group-hover:opacity-100 transition"
               >🗑</button>
             )}
@@ -171,6 +175,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                 }}
                 className="mt-0.5 w-4 h-4 rounded accent-green-500 cursor-pointer flex-shrink-0"
                 title={item.done ? "Marcar como pendiente" : "Marcar como listo (no se copiará al mes siguiente)"}
+                aria-label={item.done ? "Marcar como pendiente" : "Marcar como listo"}
               />
               <div className="flex-1 min-w-0 pr-4">
                 <div className="flex items-center gap-1">
@@ -212,6 +217,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                         onClick={() => toggleRecurring(item.id)}
                         className="text-gray-400 hover:text-teal-600 transition opacity-0 group-hover:opacity-100"
                         title="Gasto recurrente"
+                        aria-label={item.recurring ? "Quitar recurrencia" : "Marcar como recurrente"}
                       >🔁</button>
                     )}
                     {!item.locked && (
@@ -219,6 +225,7 @@ function CategoryCard({ category, total, onUpdate, onDelete }) {
                         onClick={() => deleteItem(item.id)}
                         className="text-gray-400 hover:text-red-500 transition text-lg leading-none opacity-0 group-hover:opacity-100"
                         title="Eliminar"
+                        aria-label={`Eliminar ${item.name}`}
                       >
                         ×
                       </button>
