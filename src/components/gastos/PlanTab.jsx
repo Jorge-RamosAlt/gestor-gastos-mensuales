@@ -222,7 +222,7 @@ function PlanTab({ total, TARGET }) {
       </p>
 
       {/* Phases */}
-      {PLAN_DATA.map((phase, i) => (
+      {PLAN_DATA.map((phase) => (
         <PlanPhase
           key={phase.phase}
           {...phase}
