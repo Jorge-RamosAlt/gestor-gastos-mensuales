@@ -5,7 +5,7 @@ import { useToast } from "../../hooks/useToast.js";
 
 function CategoryCard({ category, total, onUpdate, onDelete, darkMode }) {
   const toast = useToast();
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
