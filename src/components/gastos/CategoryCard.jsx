@@ -170,13 +170,15 @@ function CategoryCard({ category, total, onUpdate, onDelete, darkMode }) {
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           <div className="flex items-center gap-2">
-            {budget > 0 && (
-              <div className="text-xs text-gray-600 font-medium">
-                🎯 {fmt(catTotal)} / {fmt(budget)}
+            {budget > 0 ? (
+              <div className="text-xs font-bold" style={{ color: scheme.text }}>
+                {fmt(catTotal)} <span className="font-normal opacity-70">/ {fmt(budget)}</span>
               </div>
+            ) : (
+              <span className="text-sm font-bold" style={{ color: scheme.text }}>{fmt(catTotal)}</span>
             )}
             {overBudget && (
-              <span className="text-xs font-bold text-red-600">🚨 +{fmt(overAmount)} sobre presupuesto</span>
+              <span className="text-xs font-bold text-red-600">🚨 +{fmt(overAmount)}</span>
             )}
             <button
               onClick={(e) => {
