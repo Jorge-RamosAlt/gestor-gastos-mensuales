@@ -29,7 +29,8 @@ const CompareTab = lazy(() => import("./components/historial/CompareTab.jsx"));
 const ImportTab  = lazy(() => import("./components/importar/ImportTab.jsx"));
 const ChartPanel = lazy(() => import("./components/charts/ChartPanel.jsx"));
 const PlanTab    = lazy(() => import("./components/gastos/PlanTab.jsx"));
-const TemplateModal = lazy(() => import("./components/gastos/TemplateModal.jsx"));
+const TemplateModal  = lazy(() => import("./components/gastos/TemplateModal.jsx"));
+const CargarMesModal = lazy(() => import("./components/gastos/CargarMesModal.jsx"));
 
 import { fmt, pct, getCurrentMonthLabel } from "./lib/formatters.js";
 import { exportToPDF } from "./lib/exportPDF.js";
@@ -136,6 +137,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
   const [showAddCat, setShowAddCat]         = useState(false);
   const [newCatName, setNewCatName]         = useState("");
   const [showTemplates, setShowTemplates]   = useState(false);
+  const [showCargarMes, setShowCargarMes]   = useState(false);
 
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode);
@@ -306,6 +308,18 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
           </Suspense>
         )}
 
+        {showCargarMes && (
+          <Suspense fallback={null}>
+            <CargarMesModal
+              onClose={() => setShowCargarMes(false)}
+              onImport={(newCats) => {
+                setCategories(prev => [...prev, ...newCats]);
+                toast.success(`✅ ${newCats.reduce((s, c) => s + c.items.length, 0)} gastos importados en ${newCats.length} categoría${newCats.length !== 1 ? 's' : ''}`);
+              }}
+            />
+          </Suspense>
+        )}
+
 
         {/* ─── HEADER ─── */}
         <div className="bg-gradient-to-r from-slate-800 to-slate-700 dark:from-slate-900 dark:to-slate-800 text-white px-4 sm:px-6 py-5 shadow-lg">
@@ -351,6 +365,13 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
                   className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium px-3 py-2 rounded-lg transition border border-white/20 hidden sm:flex"
                 >
                   {isFullscreen ? <><IconCompress /> Salir</> : <><IconExpand /> Pantalla</>}
+                </button>
+                <button
+                  onClick={() => setShowCargarMes(true)}
+                  className="flex items-center gap-1.5 bg-emerald-500/30 hover:bg-emerald-500/60 text-emerald-200 hover:text-white text-xs font-semibold px-3 py-2 rounded-lg transition border border-emerald-400/40"
+                  title="Cargar mes — importar gastos fijos y tarjeta"
+                >
+                  🗓️ Cargar Mes
                 </button>
                 <button
                   onClick={() => setShowTemplates(true)}
