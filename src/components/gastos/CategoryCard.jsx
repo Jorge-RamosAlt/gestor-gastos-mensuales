@@ -189,18 +189,21 @@ function CategoryCard({ category, total, onUpdate, onDelete, darkMode }) {
               aria-label="Agregar nota"
               className="text-amber-600 hover:text-amber-700 text-xs px-1 opacity-0 group-hover:opacity-100 transition"
             >📝</button>
-            {!category.locked && onDelete && (
+            {onDelete && (
               <button
                 onClick={(e) => {
+                  if (category.locked) return;
                   e.stopPropagation();
                   if (window.confirm(`¿Eliminar categoría "${category.name}"?`)) {
                     onDelete(category.id);
                     toast.info(`Categoría "${category.name}" eliminada`);
                   }
                 }}
-                title="Eliminar categoría"
-                aria-label={`Eliminar categoría ${category.name}`}
-                className="text-red-400 hover:text-red-600 text-xs px-1 opacity-0 group-hover:opacity-100 transition"
+                title={category.locked ? undefined : "Eliminar categoría"}
+                aria-label={category.locked ? undefined : `Eliminar categoría ${category.name}`}
+                className={`text-red-400 hover:text-red-600 text-xs px-1 transition ${
+                  category.locked ? 'invisible pointer-events-none' : 'opacity-0 group-hover:opacity-100'
+                }`}
               >🗑</button>
             )}
             <span className="text-gray-500 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(0deg)' : 'rotate(180deg)' }}>▲</span>
