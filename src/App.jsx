@@ -25,17 +25,15 @@ import GastosTab from "./components/gastos/GastosTab.jsx";
 import { AppLoadingSkeleton } from "./components/ui/Skeleton.jsx";
 import { exportToCSV, exportToExcel } from "./lib/exportUtils.js";
 
+import { fmt, pct, getCurrentMonthLabel } from "./lib/formatters.js";
+import { exportToPDF } from "./lib/exportPDF.js";
+
 const CompareTab = lazy(() => import("./components/historial/CompareTab.jsx"));
 const ImportTab  = lazy(() => import("./components/importar/ImportTab.jsx"));
 const ChartPanel = lazy(() => import("./components/charts/ChartPanel.jsx"));
 const PlanTab    = lazy(() => import("./components/gastos/PlanTab.jsx"));
 const TemplateModal  = lazy(() => import("./components/gastos/TemplateModal.jsx"));
 const CargarMesModal = lazy(() => import("./components/gastos/CargarMesModal.jsx"));
-
-import { fmt, pct, getCurrentMonthLabel } from "./lib/formatters.js";
-
-const HISTORIAL_KEY = "gastos_historial_v1";
-import { exportToPDF } from "./lib/exportPDF.js";
 
 const PROFILE_KEY   = "gastos_perfil_v1";
 const HISTORY_KEY   = "gastos_historial_v1";
@@ -253,10 +251,10 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
     };
 
     try {
-      const raw  = localStorage.getItem(HISTORIAL_KEY);
+      const raw  = localStorage.getItem(HISTORY_KEY);
       const hist = raw ? JSON.parse(raw) : [];
       localStorage.setItem(
-        HISTORIAL_KEY,
+        HISTORY_KEY,
         JSON.stringify([...hist.filter(h => h.id !== id), entry])
       );
     } catch { /* ignore */ }
@@ -359,7 +357,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
               onSaveCurrentMonth={handleSaveCurrentMonth}
               onClearCategories={handleClearCategories}
               currentMonthLabel={(() => { const l = monthLabel_; return l.charAt(0).toUpperCase() + l.slice(1); })()}
-              hasExistingData={categories.some(c => c.items.length > 0)}
+              hasExistingData={categories.length > 0}
             />
           </Suspense>
         )}
