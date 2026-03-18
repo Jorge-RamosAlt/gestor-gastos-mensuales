@@ -33,6 +33,8 @@ const TemplateModal  = lazy(() => import("./components/gastos/TemplateModal.jsx"
 const CargarMesModal = lazy(() => import("./components/gastos/CargarMesModal.jsx"));
 
 import { fmt, pct, getCurrentMonthLabel } from "./lib/formatters.js";
+
+const HISTORIAL_KEY = "gastos_historial_v1";
 import { exportToPDF } from "./lib/exportPDF.js";
 
 const PROFILE_KEY   = "gastos_perfil_v1";
@@ -227,6 +229,44 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
     }
   };
 
+  // ── Cierre de mes: guarda el mes actual al historial local ─────────────────
+  const handleSaveCurrentMonth = useCallback(() => {
+    const now = new Date();
+    const curMonth = now.getMonth();
+    const curYear  = now.getFullYear();
+    const label    = getCurrentMonthLabel();
+    const id       = `${curMonth}_${curYear}`;
+
+    const catsSummary = categories.map(c => ({
+      id:    c.id,
+      total: c.items.reduce((s, i) => s + (Number(i.amount) || 0), 0),
+    }));
+    const monthTotal = catsSummary.reduce((s, c) => s + c.total, 0);
+
+    const entry = {
+      id,
+      label,
+      year:      curYear,
+      month:     curMonth,
+      total:     monthTotal,
+      breakdown: Object.fromEntries(catsSummary.map(c => [c.id, c.total])),
+    };
+
+    try {
+      const raw  = localStorage.getItem(HISTORIAL_KEY);
+      const hist = raw ? JSON.parse(raw) : [];
+      localStorage.setItem(
+        HISTORIAL_KEY,
+        JSON.stringify([...hist.filter(h => h.id !== id), entry])
+      );
+    } catch { /* ignore */ }
+  }, [categories]);
+
+  // ── Cierre de mes: limpia todas las categorías ──────────────────────────────
+  const handleClearCategories = useCallback(() => {
+    setCategories([]);
+  }, [setCategories]);
+
   const handleImport = useCallback((items, sourceFilename) => {
     const catId  = `importados_${Date.now()}`;
     const catName = sourceFilename.length > 30 ? sourceFilename.slice(0, 27) + '…' : sourceFilename;
@@ -316,6 +356,10 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
                 setCategories(prev => [...prev, ...newCats]);
                 toast.success(`✅ ${newCats.reduce((s, c) => s + c.items.length, 0)} gastos importados en ${newCats.length} categoría${newCats.length !== 1 ? 's' : ''}`);
               }}
+              onSaveCurrentMonth={handleSaveCurrentMonth}
+              onClearCategories={handleClearCategories}
+              currentMonthLabel={(() => { const l = monthLabel_; return l.charAt(0).toUpperCase() + l.slice(1); })()}
+              hasExistingData={categories.some(c => c.items.length > 0)}
             />
           </Suspense>
         )}

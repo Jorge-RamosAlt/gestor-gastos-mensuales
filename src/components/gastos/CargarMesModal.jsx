@@ -1,6 +1,7 @@
 /**
  * CargarMesModal.jsx
- * Wizard de 2 pasos para cargar el mes:
+ * Wizard para cargar el mes:
+ *   Paso 0 — Cierre de mes (guardar historial / limpiar) — solo si hay gastos cargados
  *   Paso 1 — Gastos Fijos (Gastos.xlsx)
  *   Paso 2 — Tarjeta de Crédito (PDF BBVA)
  */
@@ -77,6 +78,77 @@ function AmountCell({ amount, onChange }) {
       onClick={() => { setVal(String(amount)); setEditing(true); }}
       title="Clic para editar"
     >{fmt(amount)}</button>
+  );
+}
+
+// ─── Step 0: Cierre de mes ────────────────────────────────────────────────────
+function StepPrecheck({ currentMonthLabel, onSaveAndClean, onSaveOnly, onSkip }) {
+  return (
+    <div className="p-6 space-y-5">
+      <div className="text-center">
+        <div className="text-5xl mb-3">📅</div>
+        <h3 className="font-bold text-gray-800 text-lg mb-1">
+          Antes de cargar el nuevo mes…
+        </h3>
+        <p className="text-gray-500 text-sm leading-relaxed">
+          Tenés gastos de <strong className="text-gray-700">{currentMonthLabel}</strong> cargados.
+          <br />¿Qué hacemos con ellos?
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {/* Option A: save + clean */}
+        <button
+          onClick={onSaveAndClean}
+          className="w-full flex items-center gap-4 p-4 border-2 border-emerald-200 bg-emerald-50 hover:border-emerald-400 hover:bg-emerald-100 rounded-xl transition text-left group"
+        >
+          <span className="text-3xl group-hover:scale-110 transition-transform">💾</span>
+          <div className="flex-1">
+            <p className="font-bold text-emerald-700 text-sm">
+              Guardar {currentMonthLabel} y empezar limpio
+            </p>
+            <p className="text-xs text-emerald-600 mt-0.5">
+              Se archiva en el historial y se borran los gastos actuales — flujo normal de cierre de mes
+            </p>
+          </div>
+          <span className="text-emerald-400 text-lg">→</span>
+        </button>
+
+        {/* Option B: save only */}
+        <button
+          onClick={onSaveOnly}
+          className="w-full flex items-center gap-4 p-4 border-2 border-blue-200 bg-blue-50 hover:border-blue-400 hover:bg-blue-100 rounded-xl transition text-left group"
+        >
+          <span className="text-3xl group-hover:scale-110 transition-transform">📋</span>
+          <div className="flex-1">
+            <p className="font-bold text-blue-700 text-sm">
+              Solo guardar en el historial
+            </p>
+            <p className="text-xs text-blue-600 mt-0.5">
+              Se archiva pero los gastos actuales se mantienen — útil para agregar más gastos al mes
+            </p>
+          </div>
+          <span className="text-blue-400 text-lg">→</span>
+        </button>
+
+        {/* Option C: skip */}
+        <button
+          onClick={onSkip}
+          className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100 rounded-xl transition text-left group"
+        >
+          <span className="text-3xl group-hover:scale-110 transition-transform">⏭️</span>
+          <div className="flex-1">
+            <p className="font-bold text-gray-600 text-sm">
+              Continuar sin guardar
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Los nuevos gastos se agregan encima de los actuales
+            </p>
+          </div>
+          <span className="text-gray-300 text-lg">→</span>
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -239,7 +311,6 @@ function StepPDF({ onDone }) {
   const selectedUsd = usdTxs.filter(i => i.selected);
   const totalArs = selectedArs.reduce((s, i) => s + i.pesos, 0);
 
-  // Group by category for display
   const byCategory = {};
   for (const tx of arsTxs) {
     if (!byCategory[tx.cat]) byCategory[tx.cat] = [];
@@ -291,7 +362,6 @@ function StepPDF({ onDone }) {
         </button>
       </div>
 
-      {/* ARS transactions by category */}
       {Object.entries(byCategory).map(([cat, txs]) => {
         const color = catColor(cat);
         const catTotal = txs.filter(t => t.selected).reduce((s, t) => s + t.pesos, 0);
@@ -322,7 +392,6 @@ function StepPDF({ onDone }) {
         );
       })}
 
-      {/* USD section */}
       {usdTxs.length > 0 && (
         <div className="rounded-xl border-2 border-amber-200 overflow-hidden">
           <button
@@ -375,13 +444,41 @@ function StepPDF({ onDone }) {
 }
 
 // ─── Main Modal ───────────────────────────────────────────────────────────────
-export default function CargarMesModal({ onClose, onImport }) {
-  const [activeTab, setActiveTab] = useState('excel'); // 'excel' | 'pdf'
+export default function CargarMesModal({
+  onClose,
+  onImport,
+  onSaveCurrentMonth,
+  onClearCategories,
+  currentMonthLabel,
+  hasExistingData,
+}) {
+  // 'precheck' only if there's data to archive; otherwise go straight to 'tabs'
+  const [step, setStep]           = useState(hasExistingData ? 'precheck' : 'tabs');
+  const [savedLabel, setSavedLabel] = useState(null);
+  const [activeTab, setActiveTab] = useState('excel');
   const [doneExcel, setDoneExcel] = useState(false);
   const [donePDF, setDonePDF]     = useState(false);
 
+  // ── Precheck handlers ──────────────────────────────────────────────────────
+  const handleSaveAndClean = () => {
+    onSaveCurrentMonth?.();
+    onClearCategories?.();
+    setSavedLabel(currentMonthLabel);
+    setStep('tabs');
+  };
+
+  const handleSaveOnly = () => {
+    onSaveCurrentMonth?.();
+    setSavedLabel(currentMonthLabel);
+    setStep('tabs');
+  };
+
+  const handleSkip = () => {
+    setStep('tabs');
+  };
+
+  // ── Import handlers ────────────────────────────────────────────────────────
   const handleExcelDone = (items) => {
-    // Build a "Gastos Fijos" category
     const cat = {
       id: `gastos_fijos_${Date.now()}`,
       name: '📋 Gastos Fijos',
@@ -402,7 +499,6 @@ export default function CargarMesModal({ onClose, onImport }) {
   };
 
   const handlePDFDone = ({ arsTxs, usdTxs }) => {
-    // Group by category → each becomes a separate new category
     const catMap = {};
 
     for (const tx of arsTxs) {
@@ -413,7 +509,7 @@ export default function CargarMesModal({ onClose, onImport }) {
           name: `${tx.icon} ${tx.cat}`,
           icon: tx.icon,
           locked: false,
-          color: `bg-gray-50 border-gray-300`, // will be overridden by inline styles via detectScheme
+          color: 'bg-gray-50 border-gray-300',
           _colorHex: color,
           items: [],
         };
@@ -454,77 +550,107 @@ export default function CargarMesModal({ onClose, onImport }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-4">
+
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold">🗓️ Cargar Mes</h2>
-            <p className="text-slate-300 text-xs mt-0.5">Importá tus gastos fijos y resumen de tarjeta</p>
+            <p className="text-slate-300 text-xs mt-0.5">
+              {step === 'precheck'
+                ? `Cierre de ${currentMonthLabel}`
+                : 'Importá tus gastos fijos y resumen de tarjeta'}
+            </p>
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-white text-2xl leading-none px-2">×</button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('excel')}
-            className={`flex-1 py-3 text-sm font-semibold transition border-b-2 ${
-              activeTab === 'excel'
-                ? 'border-blue-600 text-blue-700 bg-blue-50/50'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            📊 Gastos Fijos {doneExcel && <span className="ml-1 text-green-500">✓</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('pdf')}
-            className={`flex-1 py-3 text-sm font-semibold transition border-b-2 ${
-              activeTab === 'pdf'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            💳 Tarjeta de Crédito {donePDF && <span className="ml-1 text-green-500">✓</span>}
-          </button>
-        </div>
+        {/* ── Precheck step ── */}
+        {step === 'precheck' && (
+          <StepPrecheck
+            currentMonthLabel={currentMonthLabel}
+            onSaveAndClean={handleSaveAndClean}
+            onSaveOnly={handleSaveOnly}
+            onSkip={handleSkip}
+          />
+        )}
 
-        {/* Tab content */}
-        <div className="p-5">
-          {activeTab === 'excel' && (
-            doneExcel
-              ? <div className="text-center py-8">
-                  <div className="text-4xl mb-2">✅</div>
-                  <p className="font-semibold text-gray-700">¡Gastos fijos importados!</p>
-                  <p className="text-gray-400 text-sm mt-1">Podés continuar con la tarjeta o cerrar.</p>
-                  <button onClick={() => setActiveTab('pdf')}
-                    className="mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2 rounded-xl text-sm transition">
-                    Continuar con tarjeta →
-                  </button>
-                </div>
-              : <StepExcel onDone={handleExcelDone} />
-          )}
-          {activeTab === 'pdf' && (
-            donePDF
-              ? <div className="text-center py-8">
-                  <div className="text-4xl mb-2">✅</div>
-                  <p className="font-semibold text-gray-700">¡Tarjeta importada!</p>
-                  <p className="text-gray-400 text-sm mt-1">Todos los gastos fueron agregados a la app.</p>
-                  <button onClick={onClose}
-                    className="mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-2 rounded-xl text-sm transition">
-                    Cerrar
-                  </button>
-                </div>
-              : <StepPDF onDone={handlePDFDone} />
-          )}
-        </div>
+        {/* ── Normal tabs ── */}
+        {step === 'tabs' && (
+          <>
+            {/* Saved confirmation banner */}
+            {savedLabel && (
+              <div className="mx-5 mt-4 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
+                <span className="text-emerald-500">✅</span>
+                <p className="text-sm text-emerald-700 font-medium">
+                  <strong>{savedLabel}</strong> guardado en el historial
+                </p>
+              </div>
+            )}
 
-        {/* Footer */}
-        {(doneExcel || donePDF) && !(doneExcel && donePDF) && (
-          <div className="px-5 pb-4">
-            <button onClick={onClose}
-              className="w-full border-2 border-gray-200 text-gray-500 font-medium py-2 rounded-xl hover:bg-gray-50 transition text-sm">
-              Cerrar sin continuar
-            </button>
-          </div>
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 mt-2">
+              <button
+                onClick={() => setActiveTab('excel')}
+                className={`flex-1 py-3 text-sm font-semibold transition border-b-2 ${
+                  activeTab === 'excel'
+                    ? 'border-blue-600 text-blue-700 bg-blue-50/50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                📊 Gastos Fijos {doneExcel && <span className="ml-1 text-green-500">✓</span>}
+              </button>
+              <button
+                onClick={() => setActiveTab('pdf')}
+                className={`flex-1 py-3 text-sm font-semibold transition border-b-2 ${
+                  activeTab === 'pdf'
+                    ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                💳 Tarjeta de Crédito {donePDF && <span className="ml-1 text-green-500">✓</span>}
+              </button>
+            </div>
+
+            {/* Tab content */}
+            <div className="p-5">
+              {activeTab === 'excel' && (
+                doneExcel
+                  ? <div className="text-center py-8">
+                      <div className="text-4xl mb-2">✅</div>
+                      <p className="font-semibold text-gray-700">¡Gastos fijos importados!</p>
+                      <p className="text-gray-400 text-sm mt-1">Podés continuar con la tarjeta o cerrar.</p>
+                      <button onClick={() => setActiveTab('pdf')}
+                        className="mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2 rounded-xl text-sm transition">
+                        Continuar con tarjeta →
+                      </button>
+                    </div>
+                  : <StepExcel onDone={handleExcelDone} />
+              )}
+              {activeTab === 'pdf' && (
+                donePDF
+                  ? <div className="text-center py-8">
+                      <div className="text-4xl mb-2">✅</div>
+                      <p className="font-semibold text-gray-700">¡Tarjeta importada!</p>
+                      <p className="text-gray-400 text-sm mt-1">Todos los gastos fueron agregados a la app.</p>
+                      <button onClick={onClose}
+                        className="mt-4 bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-2 rounded-xl text-sm transition">
+                        Cerrar
+                      </button>
+                    </div>
+                  : <StepPDF onDone={handlePDFDone} />
+              )}
+            </div>
+
+            {/* Footer */}
+            {(doneExcel || donePDF) && !(doneExcel && donePDF) && (
+              <div className="px-5 pb-4">
+                <button onClick={onClose}
+                  className="w-full border-2 border-gray-200 text-gray-500 font-medium py-2 rounded-xl hover:bg-gray-50 transition text-sm">
+                  Cerrar sin continuar
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
