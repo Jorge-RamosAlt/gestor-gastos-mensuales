@@ -40,3 +40,6 @@ desktop.ini
 
 # ── Testing / coverage ──
 coverage/
+
+# ── Generated health endpoint (re-created on each build) ──
+public/api/health.json

@@ -16,6 +16,27 @@
 
     "headers": [
       {
+        "source": "/api/health.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store, no-cache, must-revalidate"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json; charset=utf-8"
+          },
+          {
+            "key": "X-Health-Check",
+            "value": "securetracker-compatible"
+          },
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
+          }
+        ]
+      },
+      {
         "source": "assets/**",
         "headers": [
           {
