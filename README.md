@@ -206,3 +206,9 @@ Por favor seguí las templates de issues para reportar bugs o sugerir features.
 ## 📄 Licencia
 
 MIT — ver [LICENSE](LICENSE) para más detalles.
+
+---
+
+## ⚡ Built with AI
+
+Developed with AI assistance (Claude + Cursor). Product decisions and direction are mine — AI handles the implementation.
