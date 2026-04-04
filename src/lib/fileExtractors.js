@@ -335,7 +335,7 @@ function xmlToText(xml) {
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-    .replace(/(?:<(?:[^"'>]|"[^"]*"|'[^']*')*>)/g, '') // strip tags (handles quoted attrs)
+    .replace(/<[^]*?>/g, '')                            // strip all tags (any char incl. newlines, non-greedy)
     .replace(/\x01LT\x01/g, '<')            // restore decoded entities
     .replace(/\x01GT\x01/g, '>')
     .replace(/\x01AMP\x01/g, '&')
