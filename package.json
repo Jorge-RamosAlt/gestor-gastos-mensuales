@@ -40,5 +40,12 @@
     "tailwindcss": "^4.2.1",
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^0.21.1"
+  },
+  "overrides": {
+    "flatted": ">=3.3.2",
+    "lodash": ">=4.17.21",
+    "serialize-javascript": ">=6.0.2",
+    "brace-expansion": ">=2.0.2",
+    "picomatch": ">=4.0.2"
   }
 }

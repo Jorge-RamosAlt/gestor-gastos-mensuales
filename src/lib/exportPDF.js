@@ -2,6 +2,17 @@
  * exportPDF.js — genera un resumen PDF del mes usando el Canvas API del browser
  * No requiere librerías externas (usa window.print con estilos inline)
  */
+
+/** Encodes user-provided strings so they are safe inside HTML content */
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function exportToPDF(categories, profile, monthLabel) {
   const total = categories.reduce((s, c) => s + c.items.reduce((ss, i) => ss + (Number(i.amount)||0), 0), 0);
 
@@ -13,7 +24,7 @@ export function exportToPDF(categories, profile, monthLabel) {
     const color = cat.budget > 0 && catTotal > cat.budget ? '#ef4444' : '#1e293b';
     return `
       <tr>
-        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${cat.name}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${esc(cat.name)}</td>
         <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right;color:${color};font-weight:600">${fmt(catTotal)}</td>
         <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right;color:#64748b">${pct}%</td>
         ${cat.budget > 0 ? `<td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right;color:#64748b">${fmt(cat.budget)}</td>` : '<td></td>'}
@@ -25,7 +36,7 @@ export function exportToPDF(categories, profile, monthLabel) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Gastos ${monthLabel}</title>
+  <title>Gastos ${esc(monthLabel)}</title>
   <style>
     body { font-family: system-ui, sans-serif; color: #1e293b; padding: 32px; max-width: 800px; margin: 0 auto; }
     h1 { font-size: 24px; margin-bottom: 4px; }
@@ -41,8 +52,8 @@ export function exportToPDF(categories, profile, monthLabel) {
   </style>
 </head>
 <body>
-  <h1>📊 Análisis de Gastos — ${monthLabel}</h1>
-  <p class="sub">${profile.name} · Generado el ${new Date().toLocaleDateString('es-AR')}</p>
+  <h1>📊 Análisis de Gastos — ${esc(monthLabel)}</h1>
+  <p class="sub">${esc(profile.name)} · Generado el ${new Date().toLocaleDateString('es-AR')}</p>
   <div class="kpi">
     <div class="kpi-card"><div class="kpi-label">Sueldo actual</div><div class="kpi-value">${fmt(profile.salaryActual)}</div></div>
     <div class="kpi-card"><div class="kpi-label">Target</div><div class="kpi-value">${fmt(profile.salaryTarget)}</div></div>
@@ -57,10 +68,12 @@ export function exportToPDF(categories, profile, monthLabel) {
 </body>
 </html>`;
 
-  const win = window.open('', '_blank');
-  if (!win) return;
-  win.document.write(html);
-  win.document.close();
+  // Use Blob URL instead of document.write() to avoid DOM-based XSS sink
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const win  = window.open(url, '_blank');
+  if (!win) { URL.revokeObjectURL(url); return; }
   win.focus();
-  setTimeout(() => { win.print(); }, 500);
+  // Revoke the object URL after the print dialog closes (or after a generous timeout)
+  setTimeout(() => { URL.revokeObjectURL(url); }, 60_000);
 }

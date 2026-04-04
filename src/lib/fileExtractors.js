@@ -323,17 +323,22 @@ async function extractDOCX(file, onProgress) {
 }
 
 function xmlToText(xml) {
+  // Decode XML entities FIRST, then strip tags.
+  // This order prevents the double-unescaping pattern (strip tags → &lt; → <).
   return xml
     .replace(/<w:p[ />]/g, '\n')
     .replace(/<w:tr[ />]/g, '\n')
     .replace(/<w:tc[ />]/g, '\t')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '\x01AMP\x01')       // temp-escape & to avoid double-replace
+    .replace(/&lt;/g, '\x01LT\x01')         // temp-escape < entity
+    .replace(/&gt;/g, '\x01GT\x01')         // temp-escape > entity
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/(?:<(?:[^"'>]|"[^"]*"|'[^']*')*>)/g, '') // strip tags (handles quoted attrs)
+    .replace(/\x01LT\x01/g, '<')            // restore decoded entities
+    .replace(/\x01GT\x01/g, '>')
+    .replace(/\x01AMP\x01/g, '&')
     .split('\n')
     .map(l => l.replace(/\s+/g, ' ').trim())
     .filter(l => l)
