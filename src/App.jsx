@@ -1,19 +1,17 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from "react";
+import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from "react";
 import { useNavigate, useLocation, Routes, Route, Navigate } from "react-router-dom";
-import { onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { auth } from "./lib/firebase.js";
 import {
   getLocalWalletId, clearLocalWalletId, setLocalWalletId,
-  getSoloMode, setSoloMode,
-  saveCategories,
-  subscribeToCategories, subscribeToWallet,
-  createWallet,
-  getUserWallets, registerWalletForUser,
-  saveUserProfile, getUserProfile,
-  subscribeToHistorial,
+  setSoloMode,
+  getUserWallets,
 } from "./lib/firestoreService.js";
 import { ToastProvider } from "./components/ui/ToastContainer.jsx";
 import { useToast } from "./hooks/useToast.js";
+import { useAuthState } from "./hooks/useAuthState.js";
+import { useWalletSync } from "./hooks/useWalletSync.js";
+import { useProfileState } from "./hooks/useProfileState.js";
 import AuthPage       from "./components/auth/AuthPage.jsx";
 import WalletPage     from "./components/wallet/WalletPage.jsx";
 import WalletSelector from "./components/wallet/WalletSelector.jsx";
@@ -35,10 +33,9 @@ const PlanTab    = lazy(() => import("./components/gastos/PlanTab.jsx"));
 const TemplateModal  = lazy(() => import("./components/gastos/TemplateModal.jsx"));
 const CargarMesModal = lazy(() => import("./components/gastos/CargarMesModal.jsx"));
 
-const PROFILE_KEY   = "gastos_perfil_v1";
 const HISTORY_KEY   = "gastos_historial_v1";
 
-function loadHistory() {
+function _loadHistory() {
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
     if (!raw) return [];
@@ -47,7 +44,7 @@ function loadHistory() {
   } catch { return []; }
 }
 
-function saveHistory(entries) {
+function _saveHistory(entries) {
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries)); }
   catch (e) { if (import.meta.env.DEV) console.warn("[saveHistory]", e); }
 }
@@ -95,7 +92,7 @@ function SummaryCard({ label, value, sub, color, icon, border }) {
   );
 }
 
-function GastosApp({ profile, onReset, categories, setCategories, walletData, authUser, onLeaveWallet, onChangeWallet, onShareRequest }) {
+function GastosApp({ profile, onReset, categories, setCategories, walletData, authUser, onLeaveWallet, onChangeWallet, onShareRequest, firestoreHistory }) {
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -113,7 +110,7 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
     '/plan': 'plan',
   };
 
-  const tabToPath = {
+  const _tabToPath = {
     'gastos': '/',
     'graficos': '/graficos',
     'comparar': '/historial',
@@ -132,7 +129,6 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
     else document.documentElement.classList.remove('dark');
     return saved;
   });
-  const [firestoreHistory, setFirestoreHistory] = useState(null); // null = no wallet, [] = empty
   const [exportLoading, setExportLoading]   = useState(false);
   const [showAddCat, setShowAddCat]         = useState(false);
   const [newCatName, setNewCatName]         = useState("");
@@ -147,17 +143,6 @@ function GastosApp({ profile, onReset, categories, setCategories, walletData, au
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
-
-  // Suscribir a historial de Firestore si hay cartera colaborativa
-  useEffect(() => {
-    if (!walletData?.id) { setFirestoreHistory(null); return; }
-    const unsub = subscribeToHistorial(
-      walletData.id,
-      (entries) => setFirestoreHistory(entries),
-      (err) => { if (import.meta.env.DEV) console.warn("[GastosApp] historial error", err); }
-    );
-    return unsub;
-  }, [walletData?.id]);
 
   const handleAddCategory = () => {
     const name = newCatName.trim();
@@ -758,183 +743,32 @@ class ErrorBoundary extends React.Component {
 }
 
 function App() {
-  const [authUser,    setAuthUser]    = useState(undefined);
-  const [soloMode,    setSoloModeS]   = useState(getSoloMode);
-  const [walletId,      setWalletId]      = useState(getLocalWalletId);
-  const [walletData,    setWalletData]    = useState(null);
-  const [walletLoading, setWalletLoading] = useState(false);
-  const [userWallets,    setUserWallets]    = useState(null);
-  const [walletsLoading, setWalletsLoading] = useState(false);
-  const [categories,     setCategories]     = useState([]);
-  const [externalUpdate, setExternalUpdate] = useState(null);
+  // Use custom hooks for auth, wallet sync, and profile state
+  const {
+    authUser,
+    setAuthUser,
+    soloMode,
+    setSoloModeLocal,
+    profile,
+    setProfile,
+    userWallets,
+    setUserWallets,
+    walletsLoading,
+    setWalletsLoading,
+  } = useAuthState();
 
-  const [profile, setProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem(PROFILE_KEY);
-      if (!saved) return null;
-      const parsed = JSON.parse(saved);
-      if (!parsed?.name || !parsed?.salaryActual || !parsed?.salaryTarget) return null;
-      return parsed;
-    } catch { return null; }
-  });
-
+  const [walletId, setWalletId] = useState(getLocalWalletId);
+  const [categories, setCategories] = useState([]);
   const [showShareModal, setShowShareModal] = useState(false);
-  const appToast = useToast();
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setAuthUser(null);
-        setUserWallets(null);
-        setWalletId(null);
-        setWalletData(null);
-        setProfile(null);
-        setCategories([]);
-        return;
-      }
+  const {
+    walletData,
+    walletLoading,
+    syncedSetCategories,
+    firestoreHistory,
+  } = useWalletSync(walletId, soloMode, authUser, categories, setCategories);
 
-      setAuthUser(user);
-
-      try {
-        const firestoreProfile = await getUserProfile(user.uid);
-        if (firestoreProfile) {
-          setProfile(firestoreProfile);
-          localStorage.setItem(PROFILE_KEY, JSON.stringify(firestoreProfile));
-          if (firestoreProfile.name && firestoreProfile.name !== user.displayName) {
-            updateProfile(user, { displayName: firestoreProfile.name }).catch(() => {});
-          }
-        }
-      } catch (err) {
-        if (import.meta.env.DEV) console.warn('[Auth] No se pudo cargar el perfil:', err);
-      }
-
-      if (getLocalWalletId() && !getSoloMode()) {
-        setWalletId(getLocalWalletId());
-        return;
-      }
-
-      if (!getSoloMode()) {
-        setWalletsLoading(true);
-        try {
-          const wallets = await getUserWallets(user.uid);
-          setUserWallets(wallets);
-        } catch (err) {
-          if (import.meta.env.DEV) console.warn('[Auth] No se pudo cargar carteras:', err);
-          setUserWallets([]);
-        } finally {
-          setWalletsLoading(false);
-        }
-      }
-    });
-    return unsub;
-  }, []);
-
-  useEffect(() => {
-    if (!walletId || soloMode) return;
-
-    let unsubWallet = null;
-    let unsubCats = null;
-    setWalletLoading(true);
-
-    unsubWallet = subscribeToWallet(
-      walletId,
-      (data) => {
-        setWalletData(data);
-        if (authUser?.uid && data?.name) {
-          registerWalletForUser(authUser.uid, walletId, data.name).catch(() => {});
-        }
-      },
-      () => {}
-    );
-
-    let firstLoad = true;
-    unsubCats = subscribeToCategories(
-      walletId,
-      (data) => {
-        setWalletLoading(false);
-        if (firstLoad) {
-          setCategories(data.categories ?? []);
-          firstLoad = false;
-        } else {
-          setExternalUpdate(data);
-          if (data.updatedBy !== authUser?.uid) {
-            const name = data.updatedByName ?? 'Alguien';
-            appToast.info(`${name} actualizó los gastos`);
-          }
-        }
-      },
-      (err) => {
-        if (import.meta.env.DEV) console.error('[Firestore/categories]', err);
-        setWalletLoading(false);
-      }
-    );
-
-    return () => {
-      unsubCats?.();
-      unsubWallet?.();
-    };
-  }, [walletId, soloMode]);
-
-  useEffect(() => {
-    if (!externalUpdate) return;
-    setCategories(externalUpdate.categories ?? []);
-    setExternalUpdate(null);
-  }, [externalUpdate]);
-
-  const syncTimerRef    = useRef(null);
-  const lastSyncedRef   = useRef(null);
-  const isLocalChange   = useRef(false);
-
-  const syncedSetCategories = useCallback((updater) => {
-    isLocalChange.current = true;
-    setCategories(updater);
-  }, []);
-
-  useEffect(() => {
-    if (!walletId || soloMode || !authUser || !isLocalChange.current) return;
-    isLocalChange.current = false;
-    clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(async () => {
-      const key = JSON.stringify(categories);
-      if (key === lastSyncedRef.current) return;
-      lastSyncedRef.current = key;
-      try {
-        await saveCategories(walletId, categories, authUser);
-      } catch (e) {
-        if (import.meta.env.DEV) console.error('[Firestore/save]', e);
-        appToast.error('Error al sincronizar');
-      }
-    }, 800);
-  }, [categories, walletId, soloMode, authUser]);
-
-  const handleSetup = async (profileData) => {
-    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profileData)); } catch { /* ignore */ }
-
-    if (authUser) {
-      saveUserProfile(authUser.uid, profileData).catch((e) => {
-        if (import.meta.env.DEV) console.warn('[Firestore/saveProfile]', e);
-      });
-    }
-
-    if (authUser && profileData.name) {
-      try {
-        await updateProfile(authUser, { displayName: profileData.name });
-        setAuthUser(prev => prev
-          ? Object.assign(Object.create(Object.getPrototypeOf(prev)), prev, { displayName: profileData.name })
-          : prev
-        );
-      } catch (e) {
-        if (import.meta.env.DEV) console.warn('[Auth/displayName]', e);
-      }
-    }
-
-    setProfile(profileData);
-  };
-
-  const handleReset = () => {
-    try { localStorage.removeItem(PROFILE_KEY); } catch { /* ignore */ }
-    setProfile(null);
-  };
+  const { handleSetup, handleReset } = useProfileState(profile, setProfile, authUser);
 
   const handleWalletReady = (id) => {
     setLocalWalletId(id);
@@ -945,16 +779,14 @@ function App() {
   const handleSignOut = async () => {
     clearLocalWalletId();
     localStorage.removeItem('gastos_solo_mode');
-    localStorage.removeItem(PROFILE_KEY);
     localStorage.removeItem(HISTORY_KEY);
-    setSoloModeS(false);
+    setSoloModeLocal(false);
     await signOut(auth);
   };
 
   const handleChangeWallet = async () => {
     clearLocalWalletId();
     setWalletId(null);
-    setWalletData(null);
     setCategories([]);
     if (authUser) {
       setWalletsLoading(true);
@@ -970,13 +802,13 @@ function App() {
   };
 
   const handleEnterSolo = () => {
-    setSoloModeS(true);
+    setSoloModeLocal(true);
     setSoloMode(true);
   };
 
   const handleShareComplete = (newWalletId, user) => {
     if (user && !authUser) setAuthUser(user);
-    setSoloModeS(false);
+    setSoloModeLocal(false);
     setSoloMode(false);
     setWalletId(newWalletId);
     setShowShareModal(false);
@@ -1076,6 +908,7 @@ function App() {
         onLeaveWallet={authUser ? handleSignOut : null}
         onChangeWallet={authUser ? handleChangeWallet : null}
         onShareRequest={!walletData ? () => setShowShareModal(true) : null}
+        firestoreHistory={firestoreHistory}
       />
     </ErrorBoundary>
   );

@@ -329,6 +329,7 @@ function xmlToText(xml) {
     .replace(/<w:p[ />]/g, '\n')
     .replace(/<w:tr[ />]/g, '\n')
     .replace(/<w:tc[ />]/g, '\t')
+    /* eslint-disable no-control-regex -- \x01 is intentional: temp markers to avoid double-replace of HTML entities */
     .replace(/&amp;/g, '\x01AMP\x01')       // temp-escape & to avoid double-replace
     .replace(/&lt;/g, '\x01LT\x01')         // temp-escape < entity
     .replace(/&gt;/g, '\x01GT\x01')         // temp-escape > entity
@@ -337,8 +338,9 @@ function xmlToText(xml) {
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
     .replace(/<[^]*?>/g, '')                            // strip all tags (any char incl. newlines, non-greedy)
     .replace(/\x01LT\x01/g, '<')            // restore decoded entities
-    .replace(/\x01GT\x01/g, '>')
-    .replace(/\x01AMP\x01/g, '&')
+    .replace(/\x01GT\x01/g, '>')            // restore decoded entities
+    .replace(/\x01AMP\x01/g, '&')           // restore decoded entities
+    /* eslint-enable no-control-regex */
     .split('\n')
     .map(l => l.replace(/\s+/g, ' ').trim())
     .filter(l => l)

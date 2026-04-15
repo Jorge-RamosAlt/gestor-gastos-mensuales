@@ -9,6 +9,7 @@ export default defineConfig([
     'dist',
     'node_modules',
     '*.config.js',
+    'scripts/**',           // Node scripts (prebuild, etc.) — not browser code
     'Gastos.jsx',          // archivo legacy — no forma parte del build
     'src/App-template.jsx', // template de referencia — no se usa en producción
   ]),
