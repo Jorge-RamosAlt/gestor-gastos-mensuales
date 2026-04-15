@@ -42,6 +42,43 @@ function ImportTab({ categories: _categories, onImport }) {
     return null;
   };
 
+  const getSpecificErrorMessage = (error) => {
+    const message = error.message || "";
+
+    // File too large
+    if (message.includes("50 MB")) {
+      return "El archivo es muy grande (máximo 50 MB). Intentá dividirlo en partes más pequeñas.";
+    }
+
+    // Unsupported format
+    if (message.includes("no soportado")) {
+      return "Formato no soportado. Los formatos válidos son: PDF, Excel (.xlsx/.xls), CSV, Word (.docx), e imágenes.";
+    }
+
+    // PDF without text / scanned PDF OCR failure
+    if (message.includes("PDF sin texto") || message.includes("OCR")) {
+      return "No se pudo leer la imagen. Asegurate de que el texto sea legible y la imagen tenga buena resolución.";
+    }
+
+    // Unable to read file
+    if (message.includes("No se pudo leer el archivo")) {
+      return "No se pudo leer el archivo. Verificá que sea un archivo válido y que no esté dañado.";
+    }
+
+    // Excel format issues (.xls)
+    if (message.includes(".xls")) {
+      return "El formato .xls (Excel 97-2003) no está soportado. Abrí el archivo en Excel y guardalo como .xlsx para poder importarlo.";
+    }
+
+    // Invalid DOCX
+    if (message.includes("DOCX inválido")) {
+      return "El archivo DOCX está dañado o no es válido. Intentá abrirlo en Word y guardarlo de nuevo.";
+    }
+
+    // Keep original message as fallback
+    return message;
+  };
+
   const processFile = async (f) => {
     const err = validateFile(f);
     if (err) { setErrorMsg(err); setStep("error"); return; }
@@ -73,7 +110,8 @@ function ImportTab({ categories: _categories, onImport }) {
       setProgress({ stage: "Listo", percent: 100 });
       setStep("preview");
     } catch (e) {
-      setErrorMsg(e.message || "Error al procesar el archivo.");
+      const specificMsg = getSpecificErrorMessage(e);
+      setErrorMsg(specificMsg);
       setStep("error");
     }
   };

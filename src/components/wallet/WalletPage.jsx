@@ -111,7 +111,7 @@ export default function WalletPage({ user, initialCategories, onWalletReady, onS
         {!isAnonymous && (displayName || email) && (
           <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/10">
             {photoURL ? (
-              <img src={photoURL} alt="" className="w-9 h-9 rounded-full border-2 border-white/20" />
+              <img src={photoURL} alt="" aria-hidden="true" className="w-9 h-9 rounded-full border-2 border-white/20" />
             ) : (
               <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
                 {displayName?.[0]?.toUpperCase() ?? '?'}

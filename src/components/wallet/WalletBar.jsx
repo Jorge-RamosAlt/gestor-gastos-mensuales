@@ -35,7 +35,8 @@ function WalletBar({ walletData, authUser, onLeave, onChangeWallet }) {
             {m.photo ? (
               <img
                 src={m.photo}
-                alt={m.name}
+                alt=""
+                aria-hidden="true"
                 className={`w-7 h-7 rounded-full border-2 object-cover transition ${
                   authUser?.uid === uid ? 'border-emerald-400' : 'border-white/30'
                 }`}

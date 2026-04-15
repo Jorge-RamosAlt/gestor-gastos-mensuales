@@ -140,7 +140,7 @@ function ShareModal({ currentCategories, initialAuthUser, onClose, onShareComple
             {user && (
               <div className="flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 mb-6">
                 {user.photoURL ? (
-                  <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full" />
+                  <img src={user.photoURL} alt="" aria-hidden="true" className="w-8 h-8 rounded-full" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
                     {user.displayName?.[0]}

@@ -108,7 +108,7 @@ export default function WalletSelector({
         {/* Header: usuario + cerrar sesión */}
         <div className="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/10">
           {user.photoURL
-            ? <img src={user.photoURL} alt="" className="w-10 h-10 rounded-full border-2 border-white/20 flex-shrink-0" />
+            ? <img src={user.photoURL} alt="" aria-hidden="true" className="w-10 h-10 rounded-full border-2 border-white/20 flex-shrink-0" />
             : <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold flex-shrink-0">
                 {user.displayName?.[0]?.toUpperCase() ?? '?'}
               </div>
